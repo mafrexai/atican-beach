@@ -6,7 +6,7 @@ import { getThumbnailUrl } from '@/lib/images/imageOptimizer'
 export default async function AdminTentsPage() {
   const supabase = await createServerSupabaseClient()
   const { data: tents } = await supabase.from('tents').select('*').order('price')
-  const withoutImages = tents?.filter((t) => !t.image_url).length || 0
+  const withoutImages = tents?.filter((t: any) => !t.image_url).length || 0
 
   return (
     <div className="space-y-6">
@@ -18,7 +18,7 @@ export default async function AdminTentsPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {tents?.map((tent) => (
+        {tents?.map((tent: any) => (
           <div key={tent.id} className="bg-white rounded-xl border shadow-sm overflow-hidden">
             <div className="h-32 bg-gray-100 relative">
               {tent.image_url ? (

@@ -4,6 +4,21 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { CalendarDays, MapPin, QrCode, ChevronRight, AlertCircle } from 'lucide-react'
 import { format, isPast, isFuture, parseISO } from 'date-fns'
 
+type Booking = {
+  id: string
+  booking_reference: string
+  confirmation_code: string
+  status: string
+  payment_status: string
+  total_amount: number
+  check_in_date: string | null
+  check_out_date: string | null
+  guest_name: string
+  created_at: string
+  qr_code: string | null
+  booking_items?: Array<{ item_type: string; quantity: number; price_at_booking: number }>
+}
+
 export default async function MyBookingsPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -21,11 +36,12 @@ export default async function MyBookingsPage() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  const upcoming = (bookings || []).filter(
-    (b: any) => b.check_in_date && isFuture(parseISO(b.check_in_date)) && b.status !== 'cancelled'
+  const allBookings: Booking[] = bookings || []
+  const upcoming = allBookings.filter(
+    (b) => b.check_in_date && isFuture(parseISO(b.check_in_date)) && b.status !== 'cancelled'
   )
-  const past = (bookings || []).filter(
-    (b: any) => b.check_in_date && (isPast(parseISO(b.check_in_date)) || b.status === 'cancelled' || b.status === 'completed')
+  const past = allBookings.filter(
+    (b) => b.check_in_date && (isPast(parseISO(b.check_in_date)) || b.status === 'cancelled' || b.status === 'completed')
   )
 
   return (
@@ -37,7 +53,7 @@ export default async function MyBookingsPage() {
         <p className="text-gray-600 mt-1">View and manage your reservations</p>
       </div>
 
-      {(!bookings || bookings.length === 0) ? (
+      {allBookings.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm p-12 text-center">
           <CalendarDays className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <h2 className="text-xl font-semibold text-[#082032] mb-2">No bookings yet</h2>
@@ -84,20 +100,7 @@ export default async function MyBookingsPage() {
   )
 }
 
-function BookingCard({ booking, isPast = false }: { booking: {
-  id: string
-  booking_reference: string
-  confirmation_code: string
-  status: string
-  payment_status: string
-  total_amount: number
-  check_in_date: string | null
-  check_out_date: string | null
-  guest_name: string
-  created_at: string
-  qr_code: string | null
-  booking_items?: Array<{ item_type: string; quantity: number; price_at_booking: number }>
-}; isPast?: boolean }) {
+function BookingCard({ booking, isPast = false }: { booking: Booking; isPast?: boolean }) {
   const statusColors: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-700',
     confirmed: 'bg-green-100 text-green-700',

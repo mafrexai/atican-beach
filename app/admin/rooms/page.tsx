@@ -17,10 +17,10 @@ export default async function AdminRoomsPage({
     .order('room_number', { ascending: true })
 
   const filteredRooms = params.missing_images === 'true'
-    ? rooms?.filter((r) => !r.image_url)
+    ? rooms?.filter((r: any) => !r.image_url)
     : rooms
 
-  const roomsWithoutImages = rooms?.filter((r) => !r.image_url).length || 0
+  const roomsWithoutImages = rooms?.filter((r: any) => !r.image_url).length || 0
 
   return (
     <div className="space-y-6">
@@ -63,7 +63,7 @@ export default async function AdminRoomsPage({
 
       {/* Room Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filteredRooms?.map((room) => (
+        {filteredRooms?.map((room: any) => (
           <div
             key={room.id}
             className="bg-white rounded-xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow"

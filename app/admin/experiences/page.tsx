@@ -6,7 +6,7 @@ import { getThumbnailUrl } from '@/lib/images/imageOptimizer'
 export default async function AdminExperiencesPage() {
   const supabase = await createServerSupabaseClient()
   const { data: experiences } = await supabase.from('experiences').select('*').order('price')
-  const withoutImages = experiences?.filter((e) => !e.image_url).length || 0
+  const withoutImages = experiences?.filter((e: any) => !e.image_url).length || 0
 
   return (
     <div className="space-y-6">
@@ -18,7 +18,7 @@ export default async function AdminExperiencesPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {experiences?.map((exp) => (
+        {experiences?.map((exp: any) => (
           <div key={exp.id} className="bg-white rounded-xl border shadow-sm overflow-hidden">
             <div className="h-32 bg-gray-100 relative">
               {exp.image_url ? (

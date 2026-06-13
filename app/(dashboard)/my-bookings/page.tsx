@@ -22,10 +22,10 @@ export default async function MyBookingsPage() {
     .order('created_at', { ascending: false })
 
   const upcoming = (bookings || []).filter(
-    (b) => b.check_in_date && isFuture(parseISO(b.check_in_date)) && b.status !== 'cancelled'
+    (b: any) => b.check_in_date && isFuture(parseISO(b.check_in_date)) && b.status !== 'cancelled'
   )
   const past = (bookings || []).filter(
-    (b) => b.check_in_date && (isPast(parseISO(b.check_in_date)) || b.status === 'cancelled' || b.status === 'completed')
+    (b: any) => b.check_in_date && (isPast(parseISO(b.check_in_date)) || b.status === 'cancelled' || b.status === 'completed')
   )
 
   return (

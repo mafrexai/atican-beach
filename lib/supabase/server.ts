@@ -1,12 +1,36 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+// Check Supabase environment variables early
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ Supabase environment variables not configured')
+}
+
 export const createServerSupabaseClient = async () => {
+  // Return a mock client if Supabase is not configured
+  if (!supabaseUrl || !supabaseKey) {
+    return {
+      auth: {
+        getUser: async () => ({ data: { user: null } }),
+        getSession: async () => ({ data: { session: null } }),
+        signInWithPassword: async () => ({ data: { user: null }, error: { message: 'Supabase not configured' } }),
+        signOut: async () => {},
+      },
+      from: () => ({
+        select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }) }) }),
+        insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }) }) }),
+      }),
+    } as any
+  }
+
   const cookieStore = await cookies()
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         get(name: string) {
@@ -32,9 +56,23 @@ export const createServerSupabaseClient = async () => {
 }
 
 export const createAdminClient = () => {
+  // Return a mock client if Supabase is not configured
+  if (!supabaseUrl || !supabaseKey) {
+    return {
+      auth: {
+        getUser: async () => ({ data: { user: null } }),
+        getSession: async () => ({ data: { session: null } }),
+      },
+      from: () => ({
+        select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }) }) }),
+        insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }) }) }),
+      }),
+    } as any
+  }
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    supabaseUrl,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey,
     {
       cookies: {
         get() { return undefined },

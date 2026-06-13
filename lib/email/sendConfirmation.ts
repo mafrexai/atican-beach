@@ -1,6 +1,11 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const RESEND_API_KEY = process.env.RESEND_API_KEY
+
+let resend: any = null
+if (RESEND_API_KEY) {
+  resend = new Resend(RESEND_API_KEY)
+}
 
 interface ConfirmationData {
   bookingReference: string
@@ -17,6 +22,10 @@ export async function sendBookingConfirmation(
   email: string,
   data: ConfirmationData
 ) {
+  if (!resend) {
+    console.warn('⚠️ Resend not configured - skipping email sending')
+    return
+  }
   const itemsHtml = data.items
     .map(
       (item) => `

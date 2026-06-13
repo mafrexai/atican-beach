@@ -1,0 +1,46 @@
+name: atican-architect
+description: Enforces Next.js 14 App Router patterns, TypeScript strict mode, 'use client' for interactive components, Zustand for cart, Zod for forms. Activate when building frontend components, pages, or client-side logic for Atican Beach Resort.
+
+rules:
+  - "Always use Next.js 14 App Router (app/ directory, not pages/)"
+  - "TypeScript strict mode is enabled — no 'any' types, use proper type definitions from types/database.ts"
+  - "Add 'use client' directive at the top of any component using useState, useEffect, event handlers, or browser APIs"
+  - "Add 'use client' directive for any component using Framer Motion (motion.div, AnimatePresence, etc.)"
+  - "Use Zustand (stores/) for global state — cartStore.ts pattern with persistence"
+  - "Use Zod schemas for all form validation with @hookform/resolvers"
+  - "Use Server Components by default — only use Client Components when interactivity is needed"
+  - "API routes go in app/api/route.ts pattern"
+  - "Use path aliases: @/components/, @/lib/, @/stores/, @/types/, @/hooks/"
+  - "Tailwind CSS for styling — use the blue/orange brand color palette"
+  - "Use lucide-react for icons"
+  - "Error boundaries and loading states for all async operations"
+
+file_patterns:
+  - "app/**/*.tsx"
+  - "components/**/*.tsx"
+  - "stores/**/*.ts"
+  - "hooks/**/*.ts"
+
+examples:
+  - pattern: "Interactive component with state"
+    code: |
+      'use client'
+      import { useState } from 'react'
+      export default function MyComponent() {
+        const [open, setOpen] = useState(false)
+        return <div onClick={() => setOpen(!open)}>...</div>
+      }
+  - pattern: "Animated component"
+    code: |
+      'use client'
+      import { motion } from 'framer-motion'
+      export default function AnimatedCard() {
+        return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>...</motion.div>
+      }
+  - pattern: "Zod form validation"
+    code: |
+      import { z } from 'zod'
+      const schema = z.object({
+        email: z.string().email(),
+        name: z.string().min(2),
+      })

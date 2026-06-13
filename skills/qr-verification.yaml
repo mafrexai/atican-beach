@@ -1,0 +1,53 @@
+name: qr-verification
+description: Generates QR codes with booking data (ATC-XXXX, confirmation code), supports both QR scanning and manual code entry for gate staff. Activate when working with QR code generation, verification, check-in flows, or gate access control.
+
+rules:
+  - "Use 'qrcode' npm package for server-side QR generation"
+  - "Use 'react-qr-code' for client-side QR display"
+  - "QR data format: JSON with booking_reference, confirmation_code, guest_name, check_in, check_out"
+  - "Booking reference: ATC-XXXX (uppercase alphanumeric, 4 chars)"
+  - "Confirmation code: 6-digit numeric code (from lib/utils/bookingCodes.ts)"
+  - "QR codes generated after successful payment, included in confirmation email"
+  - "Gate staff can verify by scanning QR or entering confirmation code manually"
+  - "Verification: booking exists, status is 'confirmed', dates are valid"
+
+file_patterns:
+  - "lib/utils/bookingCodes.ts"
+  - "lib/email/sendConfirmation.ts"
+  - "app/api/bookings/**/*.ts"
+  - "app/booking/confirmed/**/*.tsx"
+  - "components/**/*.tsx"
+
+qr_data_format:
+  booking_reference: "ATC-XXXX"
+  confirmation_code: "123456"
+  guest_name: "John Doe"
+  check_in: "2024-06-15"
+  check_out: "2024-06-17"
+
+generation:
+  server_side: { package: "qrcode", usage: "qrcode.toDataURL(JSON.stringify(qrData))", output: "data URL for email embedding" }
+  client_side: { package: "react-qr-code", usage: "<QRCode value={JSON.stringify(qrData)} size={256} />", output: "SVG QR in browser" }
+
+verification:
+  qr_scan:
+    - "Scan QR code with device camera"
+    - "Parse JSON data from QR code"
+    - "Look up booking by booking_reference"
+    - "Verify status is 'confirmed'"
+    - "Verify current date is within check-in/check-out range"
+    - "Grant access and log entry"
+  manual_entry:
+    - "Gate staff enters 6-digit confirmation code"
+    - "Look up booking by confirmation_code"
+    - "Verify status is 'confirmed'"
+    - "Verify current date is within check-in/check-out range"
+    - "Grant access and log entry"
+
+check_in_flow:
+  - "Guest arrives at gate with QR code or confirmation code"
+  - "Staff scans QR or enters code manually"
+  - "System verifies booking is confirmed and dates are valid"
+  - "System updates booking status to 'checked_in'"
+  - "System logs check-in timestamp"
+  - "Grant access to resort"

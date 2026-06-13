@@ -1,0 +1,42 @@
+name: hotel-db-schema
+description: Manages 45-room inventory (Standard, Deluxe, Executive, Suites, Presidential), 8 tents, 4 experiences, 7 event spaces. Prevents double-booking with availability checks. Activate when working with database schema, room inventory, booking logic, or availability queries.
+
+inventory:
+  rooms:
+    total: 45
+    types:
+      - { name: "Standard", count: 15, price: 55000, occupancy: 2, amenities: ["AC", "TV", "WiFi"] }
+      - { name: "Deluxe", count: 10, price: 65000, occupancy: 2, amenities: ["AC", "TV", "WiFi", "Mini Bar"] }
+      - { name: "Double Bed", count: 5, price: 75000, occupancy: 2, amenities: ["AC", "TV", "WiFi", "Mini Bar", "Ocean View"] }
+      - { name: "Family", count: 5, price: 95000, occupancy: 4, amenities: ["AC", "TV", "WiFi", "Mini Bar", "2 Bedrooms"] }
+      - { name: "Executive", count: 4, price: 120000, occupancy: 2, amenities: ["AC", "TV", "WiFi", "Mini Bar", "Ocean View", "Lounge"] }
+      - { name: "Premium Suite", count: 3, price: 180000, occupancy: 4, amenities: ["AC", "TV", "WiFi", "Mini Bar", "Ocean View", "Lounge", "Jacuzzi"] }
+      - { name: "Executive Suite", count: 2, price: 250000, occupancy: 4, amenities: ["AC", "TV", "WiFi", "Mini Bar", "Ocean View", "Lounge", "Jacuzzi", "Butler"] }
+      - { name: "Presidential Suite", count: 1, price: 500000, occupancy: 6, amenities: ["AC", "TV", "WiFi", "Mini Bar", "Ocean View", "Lounge", "Jacuzzi", "Butler", "Private Pool"] }
+  tents: { total: 8, types: ["Small Setup", "Medium Setup", "Large Setup", "XL Setup", "Photo Shoot", "Video Shoot", "VIP Event Space"] }
+  experiences: { total: 4, items: ["Bonfire", "Sack Race", "Beach Ball", "Horse Riding"] }
+  event_spaces: { total: 7, items: ["Small Setup", "Medium Setup", "Large Setup", "XL Setup", "Photo Shoot", "Video Shoot", "VIP Event Space"] }
+
+rules:
+  - "Always check availability before creating a booking (use lib/availability/checkAvailability.ts)"
+  - "Prevent double-booking: query existing bookings for overlapping dates"
+  - "Room status flow: available → pending → confirmed (after payment) or cancelled"
+  - "Booking reference format: ATC-XXXX (uppercase alphanumeric, 4 chars)"
+  - "Confirmation code: 6-digit numeric code"
+  - "All prices in Naira (₦), stored as integers in database"
+  - "Use Supabase RLS for all table access"
+  - "Booking statuses: pending, confirmed, checked_in, checked_out, cancelled"
+  - "Payment statuses: pending, paid, refunded, failed"
+
+file_patterns:
+  - "supabase/migrations/*.sql"
+  - "types/database.ts"
+  - "lib/availability/*.ts"
+  - "app/api/bookings/**/*.ts"
+  - "lib/utils/bookingCodes.ts"
+
+tables:
+  rooms: "id, room_number, room_type, price_per_night, max_occupancy, amenities, is_active, created_at"
+  bookings: "id, booking_reference, guest_name, guest_email, guest_phone, check_in_date, check_out_date, total_amount, status, payment_status, confirmation_code, qr_code_url, special_requests, created_at"
+  booking_items: "id, booking_id, item_type, item_id, item_name, quantity, unit_price, total_price, created_at"
+  payments: "id, booking_id, amount, currency, payment_method, payment_reference, status, created_at"

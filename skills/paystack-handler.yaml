@@ -1,0 +1,46 @@
+name: paystack-handler
+description: Handles Paystack payment integration - initialize transactions, verify callbacks, create booking records after successful payment. Activate when working with payment flows, Paystack API calls, webhook handling, or booking-payment linking.
+
+rules:
+  - "Use @paystack/paystack-sdk for all Paystack API calls"
+  - "Store Paystack secret key in PAYSTACK_SECRET_KEY environment variable"
+  - "Amounts to Paystack must be in kobo (multiply Naira by 100)"
+  - "Always verify booking exists and is in 'pending' status before initializing payment"
+  - "Use booking_reference as the Paystack transaction reference"
+  - "Callback URL should point to /booking/confirmed?ref={booking_reference}"
+  - "Webhook must verify HMAC-SHA512 signature using x-paystack-signature header"
+  - "Only process charge.success events from Paystack webhook"
+  - "After successful payment: update booking status to 'confirmed', payment_status to 'paid'"
+  - "Send confirmation email after payment verification"
+  - "Handle idempotency: check if booking already confirmed before updating"
+
+file_patterns:
+  - "lib/paystack/**/*.ts"
+  - "app/api/paystack/**/*.ts"
+  - "app/checkout/**/*.tsx"
+  - "types/paystack.d.ts"
+
+payment_flow:
+  step_1: "Frontend calls /api/bookings/create → creates booking with status 'pending'"
+  step_2: "Frontend calls /api/paystack/initialize → gets authorization_url"
+  step_3: "Frontend redirects user to Paystack authorization_url"
+  step_4: "User completes payment on Paystack"
+  step_5: "Paystack redirects to callback_url (/booking/confirmed?ref=ATC-XXXX)"
+  step_6: "Paystack sends webhook to /api/paystack/webhook with charge.success"
+  step_7: "Server verifies webhook signature and updates booking to confirmed/paid"
+  step_8: "Server sends confirmation email with QR code"
+
+api_routes:
+  initialize: { path: "app/api/paystack/initialize/route.ts", method: "POST", body: "{ email, amount, bookingReference, callbackUrl }", response: "{ success, authorization_url, reference }" }
+  webhook: { path: "app/api/paystack/webhook/route.ts", method: "POST", auth: "HMAC-SHA512 signature verification", events: "charge.success" }
+
+environment:
+  - "PAYSTACK_SECRET_KEY=sk_test_... (or sk_live_... for production)"
+  - "NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_... (or pk_live_...)"
+
+error_handling:
+  - "400: Missing required fields"
+  - "401: Invalid webhook signature"
+  - "404: Booking not found"
+  - "400: Booking not in pending status"
+  - "500: Unexpected errors (with console.error logging)"

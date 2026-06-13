@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-playfair);
+
+  /* ===== ATICAN BEACH OFFICIAL BRAND PALETTE ===== */
+  /* Primary Ocean Blue */
+  --color-ocean-50: #e6f0f7;
+  --color-ocean-100: #c0dbe9;
+  --color-ocean-200: #96c3d9;
+  --color-ocean-300: #6caac9;
+  --color-ocean-400: #4d97bd;
+  --color-ocean-500: #2e84b1;
+  --color-ocean-600: #0A3D62;
+  --color-ocean-700: #08324f;
+  --color-ocean-800: #06273d;
+  --color-ocean-900: #041c2a;
+
+  /* Deep Navy Blue */
+  --color-navy-50: #e0e6ea;
+  --color-navy-100: #b3c2cc;
+  --color-navy-200: #8099aa;
+  --color-navy-300: #4d7088;
+  --color-navy-400: #26516f;
+  --color-navy-500: #082032;
+  --color-navy-600: #071b2a;
+  --color-navy-700: #051622;
+  --color-navy-800: #04111a;
+  --color-navy-900: #020c12;
+
+  /* Warm Sand */
+  --color-sand-50: #fefdfb;
+  --color-sand-100: #fdf9f3;
+  --color-sand-200: #faf5ec;
+  --color-sand-300: #F5F1E8;
+  --color-sand-400: #ebe5d6;
+  --color-sand-500: #e0d8c4;
+
+  /* Sunset Orange */
+  --color-sunset-50: #fff3e6;
+  --color-sunset-100: #ffe0bf;
+  --color-sunset-200: #ffcc95;
+  --color-sunset-300: #ffb76b;
+  --color-sunset-400: #ffa74a;
+  --color-sunset-500: #F97316;
+  --color-sunset-600: #e0650f;
+  --color-sunset-700: #c4550a;
+  --color-sunset-800: #a34608;
+
+  /* Luxury Gold */
+  --color-gold-50: #faf6e6;
+  --color-gold-100: #f2e8bf;
+  --color-gold-200: #e9d995;
+  --color-gold-300: #e0ca6b;
+  --color-gold-400: #d9be4a;
+  --color-gold-500: #D4AF37;
+  --color-gold-600: #b8962f;
+  --color-gold-700: #9a7d27;
+  --color-gold-800: #7c641f;
+
+  /* Beach White */
+  --color-beach: #FFFFFF;
+
+  /* Animations */
+  --animate-fade-in: fadeIn 0.5s ease-in-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+:root {
+  --background: #FFFFFF;
+  --foreground: #082032;
+  --primary: #0A3D62;
+  --secondary: #F97316;
+  --accent: #D4AF37;
+  --sand: #F5F1E8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #082032;
+    --foreground: #F5F1E8;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer components {
+  .luxury-container {
+    max-width: 80rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .luxury-container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .luxury-container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  .gradient-text {
+    background: linear-gradient(to right, #0A3D62, #F97316);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .btn-primary {
+    background-color: #0A3D62;
+    color: #FFFFFF;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-primary:hover {
+    background-color: #08324f;
+  }
+
+  .btn-secondary {
+    background-color: #F97316;
+    color: #FFFFFF;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary:hover {
+    background-color: #e0650f;
+  }
+
+  .btn-gold {
+    background-color: #D4AF37;
+    color: #082032;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-gold:hover {
+    background-color: #b8962f;
+  }
+}

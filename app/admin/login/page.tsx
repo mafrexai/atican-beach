@@ -1,9 +1,6 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
-
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react'
@@ -15,7 +12,13 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  const supabase = createClient()
+
+  // Stable client - prevents infinite re-renders
+  const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => {
+    console.log('🔄 Admin Login page mounted')
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,35 +33,40 @@ export default function AdminLogin() {
 
       if (signInError) throw signInError
 
-      // Check user_roles table first
-      const { data: userRole, error: roleError } = await supabase
+      // Check admin role
+      const { data: userRole } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', data.user.id)
         .single()
 
-      if (!roleError && userRole?.role === 'admin') {
-        router.push('/admin')
+      if (userRole?.role === 'admin') {
+        console.log('✅ Admin login successful')
         router.refresh()
+        setTimeout(() => router.push('/admin'), 300)
+        setTimeout(() => window.location.href = '/admin', 1000) // fallback
         return
       }
 
-      // Fallback: check profiles table
-      const { data: profile, error: profileError } = await supabase
+      // Fallback check in profiles
+      const { data: profile } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', data.user.id)
         .single()
 
-      if (!profileError && profile?.role === 'admin') {
-        router.push('/admin')
+      if (profile?.role === 'admin') {
+        console.log('✅ Admin login successful (via profiles)')
         router.refresh()
+        setTimeout(() => router.push('/admin'), 300)
+        setTimeout(() => window.location.href = '/admin', 1000)
         return
       }
 
       await supabase.auth.signOut()
       throw new Error('Unauthorized: Admin access only')
     } catch (err: any) {
+      console.error('Login error:', err)
       setError(err.message || 'Login failed. Please check your credentials.')
     } finally {
       setLoading(false)

@@ -10,6 +10,7 @@ export default function CheckoutPage() {
   const router = useRouter()
   const items = useCartStore((s) => s.items)
   const getTotal = useCartStore((s) => s.getTotal)
+  const clearCart = useCartStore((s) => s.clearCart)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -38,7 +39,6 @@ export default function CheckoutPage() {
           }),
         })
         const data = await res.json()
-        // If we get a specific error code, Paystack is not configured
         if (data.code === 'PAYSTACK_NOT_CONFIGURED') {
           setPaystackConfigured(false)
         } else {
@@ -63,7 +63,7 @@ export default function CheckoutPage() {
     setError(null)
 
     try {
-      // Create booking first
+      // Step 1: Create booking first
       const bookingRes = await fetch('/api/bookings/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -92,14 +92,15 @@ export default function CheckoutPage() {
         throw new Error(bookingData.error || 'Failed to create booking')
       }
 
-      // If Paystack is not configured, show success message
+      // Step 2: If Paystack is not configured, show success message
       if (paystackConfigured === false) {
         setBookingSuccess(bookingData.booking.reference)
+        clearCart()
         setLoading(false)
         return
       }
 
-      // Initialize Paystack payment
+      // Step 3: Initialize Paystack payment
       const paystackRes = await fetch('/api/paystack/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,6 +118,7 @@ export default function CheckoutPage() {
         throw new Error(paystackData.error || 'Payment initialization failed')
       }
 
+      // Step 4: Redirect to Paystack payment page
       window.location.href = paystackData.authorization_url
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -124,7 +126,8 @@ export default function CheckoutPage() {
     }
   }
 
-  if (items.length === 0) {
+  // Empty cart state
+  if (items.length === 0 && !bookingSuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F1E8]">
         <div className="text-center">
@@ -140,7 +143,7 @@ export default function CheckoutPage() {
     )
   }
 
-  // Show booking success message
+  // Booking success state (offline payment)
   if (bookingSuccess) {
     return (
       <div className="min-h-screen bg-[#F5F1E8] py-12 flex items-center justify-center">
@@ -184,6 +187,7 @@ export default function CheckoutPage() {
           </div>
 
           <div className="p-6">
+            {/* Order Summary */}
             <div className="mb-8">
               <h2 className="text-lg font-semibold text-[#082032] mb-4">Order Summary</h2>
               <div className="space-y-3">
@@ -192,7 +196,7 @@ export default function CheckoutPage() {
                     <div>
                       <p className="font-medium text-[#082032]">{item.name}</p>
                       <p className="text-sm text-gray-500">{item.type.replace('_', ' ')} × {item.quantity}</p>
-                      {item.metadata.checkIn && (
+                      {item.metadata.checkIn && item.metadata.checkOut && (
                         <p className="text-xs text-gray-400">{item.metadata.checkIn} → {item.metadata.checkOut}</p>
                       )}
                     </div>
@@ -221,30 +225,56 @@ export default function CheckoutPage() {
               </div>
             )}
 
+            {/* Guest Details Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
               <h2 className="text-lg font-semibold text-[#082032]">Guest Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                  <input type="text" name="name" required value={formData.name} onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent" placeholder="John Doe" />
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
+                    placeholder="John Doe"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-                  <input type="email" name="email" required value={formData.email} onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent" placeholder="john@example.com" />
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
+                    placeholder="john@example.com"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                  <input type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent" placeholder="+234 800 000 0000" />
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
+                    placeholder="+234 800 000 0000"
+                  />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Special Requests</label>
-                <textarea name="specialRequests" value={formData.specialRequests} onChange={handleChange} rows={3}
+                <textarea
+                  name="specialRequests"
+                  value={formData.specialRequests}
+                  onChange={handleChange}
+                  rows={3}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
-                  placeholder="Any special requests or preferences..." />
+                  placeholder="Any special requests or preferences..."
+                />
               </div>
 
               {error && (
@@ -254,14 +284,31 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              <button type="submit" disabled={loading}
+              <button
+                type="submit"
+                disabled={loading}
                 className="w-full bg-[#0A3D62] text-white py-4 rounded-lg font-semibold text-lg hover:bg-[#08324f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {loading ? (<><Loader2 className="w-5 h-5 animate-spin" />Processing...</>) : paystackConfigured === false ? (<><Info className="w-5 h-5" />Complete Booking (Payment Offline)</>) : (<><CreditCard className="w-5 h-5" />Pay ₦{total.toLocaleString()} with Paystack</>)}
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : paystackConfigured === false ? (
+                  <>
+                    <Info className="w-5 h-5" />
+                    Complete Booking (Payment Offline)
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5" />
+                    Pay ₦{total.toLocaleString()} with Paystack
+                  </>
+                )}
               </button>
 
               <p className="text-center text-sm text-gray-500">
-                {paystackConfigured === false 
+                {paystackConfigured === false
                   ? 'Your booking will be created. Our team will contact you for payment arrangements.'
                   : 'Secure payment powered by Paystack. You will be redirected to complete payment.'
                 }

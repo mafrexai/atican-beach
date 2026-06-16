@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import paystack from '@/lib/paystack'
+import { initializeTransaction, isPaystackConfigured } from '@/lib/paystack'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,10 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if Paystack is configured
-    const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY
-    const NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
-
-    if (!PAYSTACK_SECRET_KEY || !NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY) {
+    if (!isPaystackConfigured) {
       return NextResponse.json(
         { 
           error: 'Payment system not configured. Please contact the administrator.',
@@ -35,6 +32,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createServerSupabaseClient()
 
+    // Verify booking exists and is in pending status
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select('id, booking_reference, total_amount, status')
@@ -52,25 +50,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const paystackParams: {
-      email: string
-      amount: number
-      reference?: string
-      callback_url?: string
-      metadata?: Record<string, unknown>
-    } = {
+    // Initialize Paystack transaction
+    const response = await initializeTransaction({
       email,
-      amount: amount * 100,
+      amount,
       reference: bookingReference,
+      callback_url: callbackUrl,
       metadata: {
         booking_reference: bookingReference,
         booking_id: booking.id,
       },
-    }
-
-    if (callbackUrl) paystackParams.callback_url = callbackUrl
-
-    const response = await paystack.initialize(paystackParams)
+    })
 
     if (!response.status) {
       return NextResponse.json(

@@ -55,7 +55,7 @@ export default async function ProfilePage() {
                   <input
                     type="text"
                     defaultValue={profile?.full_name || ''}
-                    className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:border-[#0A3D62] transition"
+                    className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:border-[#0A3D62] transition text-gray-900 placeholder:text-gray-400"
                     placeholder="Enter your full name"
                   />
                 </div>
@@ -70,7 +70,7 @@ export default async function ProfilePage() {
                     type="email"
                     value={user.email || ''}
                     disabled
-                    className="w-full pl-12 pr-4 py-4 border border-gray-200 bg-gray-50 rounded-2xl text-gray-500 cursor-not-allowed"
+                    className="w-full pl-12 pr-4 py-4 border border-gray-200 bg-gray-50 rounded-2xl text-gray-900 cursor-not-allowed"
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1.5">Email cannot be changed</p>
@@ -84,7 +84,7 @@ export default async function ProfilePage() {
                   <input
                     type="tel"
                     defaultValue={profile?.phone || ''}
-                    className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:border-[#0A3D62]"
+                    className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:border-[#0A3D62] text-gray-900 placeholder:text-gray-400"
                     placeholder="+234 801 234 5678"
                   />
                 </div>
@@ -98,7 +98,7 @@ export default async function ProfilePage() {
                   <input
                     type="date"
                     defaultValue={profile?.date_of_birth || ''}
-                    className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:border-[#0A3D62]"
+                    className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:border-[#0A3D62] text-gray-900"
                   />
                 </div>
               </div>
@@ -112,7 +112,7 @@ export default async function ProfilePage() {
                 <textarea
                   defaultValue={profile?.address || ''}
                   rows={4}
-                  className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-3xl focus:outline-none focus:border-[#0A3D62] resize-y"
+                  className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-3xl focus:outline-none focus:border-[#0A3D62] resize-y text-gray-900 placeholder:text-gray-400"
                   placeholder="Enter your full address"
                 />
               </div>

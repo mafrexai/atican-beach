@@ -93,7 +93,7 @@ export default function AdminLogin() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0A3D62]"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0A3D62] text-gray-900 placeholder:text-gray-400"
                 placeholder="admin@aticanbeach.com"
                 required
               />
@@ -108,7 +108,7 @@ export default function AdminLogin() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0A3D62]"
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0A3D62] text-gray-900 placeholder:text-gray-400"
                 placeholder="••••••••"
                 required
               />

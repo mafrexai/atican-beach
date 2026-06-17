@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { CreditCard, Loader2, AlertCircle, Info, CheckCircle } from 'lucide-react'
+import { CreditCard, Loader2, AlertCircle, Info, CheckCircle, Trash2 } from 'lucide-react'
 import { useCartStore } from '@/stores/cartStore'
 
 export default function CheckoutPage() {
@@ -11,6 +11,8 @@ export default function CheckoutPage() {
   const items = useCartStore((s) => s.items)
   const getTotal = useCartStore((s) => s.getTotal)
   const clearCart = useCartStore((s) => s.clearCart)
+  const removeItem = useCartStore((s) => s.removeItem)
+  const updateQuantity = useCartStore((s) => s.updateQuantity)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -193,17 +195,37 @@ export default function CheckoutPage() {
               <div className="space-y-3">
                 {items.map((item) => (
                   <div key={item.id} className="flex justify-between items-center p-3 bg-[#F5F1E8] rounded-lg">
-                    <div>
-                      <p className="font-medium text-[#082032]">{item.name}</p>
-                      <p className="text-sm text-gray-500">{item.type.replace('_', ' ')} × {item.quantity}</p>
-                      {item.metadata.checkIn && item.metadata.checkOut && (
-                        <p className="text-xs text-gray-400">{item.metadata.checkIn} → {item.metadata.checkOut}</p>
-                      )}
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-[#082032]">{item.name}</p>
+                          <p className="text-sm text-gray-500">{item.type.replace('_', ' ')} × {item.quantity}</p>
+                          {item.metadata.checkIn && item.metadata.checkOut && (
+                            <p className="text-xs text-gray-400">{item.metadata.checkIn} → {item.metadata.checkOut}</p>
+                          )}
+                        </div>
+                        <p className="font-semibold text-[#0A3D62]">₦{(item.price * item.quantity).toLocaleString()}</p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          onClick={() => removeItem(item.id)}
+                          className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                    <p className="font-semibold text-[#0A3D62]">₦{(item.price * item.quantity).toLocaleString()}</p>
                   </div>
                 ))}
               </div>
+              <button
+                onClick={clearCart}
+                className="mt-3 text-sm text-red-600 hover:text-red-800 flex items-center gap-1"
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear All Items
+              </button>
               <div className="mt-4 pt-4 border-t flex justify-between items-center">
                 <span className="text-lg font-semibold text-[#082032]">Total</span>
                 <span className="text-2xl font-bold text-[#0A3D62]">₦{total.toLocaleString()}</span>
@@ -231,38 +253,38 @@ export default function CheckoutPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
-                    placeholder="John Doe"
-                  />
+              <input
+                type="text"
+                name="name"
+                required
+                value={formData.name}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
+                placeholder="John Doe"
+              />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
-                    placeholder="john@example.com"
-                  />
+              <input
+                type="email"
+                name="email"
+                required
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
+                placeholder="john@example.com"
+              />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
-                    placeholder="+234 800 000 0000"
-                  />
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
+                placeholder="+234 800 000 0000"
+              />
                 </div>
               </div>
               <div>
@@ -272,7 +294,7 @@ export default function CheckoutPage() {
                   value={formData.specialRequests}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
                   placeholder="Any special requests or preferences..."
                 />
               </div>

@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
 
+export interface User extends Profile {
+  email: string
+}
+
 export function useAuth() {
-  const [user, setUser] = useState<Profile | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -18,7 +22,11 @@ export function useAuth() {
           .select('*')
           .eq('id', session.user.id)
           .single()
-        setUser(profile as Profile)
+        
+        setUser({
+          ...(profile as Profile),
+          email: session.user.email || ''
+        })
       } else {
         setUser(null)
       }
@@ -36,7 +44,11 @@ export function useAuth() {
             .select('*')
             .eq('id', session.user.id)
             .single()
-          setUser(profile as Profile)
+          
+          setUser({
+            ...(profile as Profile),
+            email: session.user.email || ''
+          })
         } else {
           setUser(null)
         }
@@ -47,5 +59,11 @@ export function useAuth() {
     return () => subscription.unsubscribe()
   }, [])
 
-  return { user, loading }
+  const signOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    setUser(null)
+  }
+
+  return { user, loading, signOut }
 }

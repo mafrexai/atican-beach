@@ -108,7 +108,7 @@ export default function RegisterPage() {
             <Waves className="w-10 h-10 text-[#D4AF37]" />
             <span className="text-2xl font-bold text-white">Atican Beach</span>
           </Link>
-          <p className="text-blue-300 mt-2">Create your account</p>
+          <p className="text-white/80 mt-2">Create your account</p>
         </div>
 
         {/* Form */}
@@ -133,7 +133,7 @@ export default function RegisterPage() {
                   required
                   value={formData.fullName}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
                   placeholder="John Doe"
                 />
               </div>
@@ -149,7 +149,7 @@ export default function RegisterPage() {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
                   placeholder="you@example.com"
                 />
               </div>
@@ -165,7 +165,7 @@ export default function RegisterPage() {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
                   placeholder="Min. 8 characters"
                 />
               </div>
@@ -181,7 +181,7 @@ export default function RegisterPage() {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
                   placeholder="Repeat password"
                 />
               </div>
@@ -208,8 +208,8 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <p className="text-center text-blue-300/60 text-sm mt-6">
-          <Link href="/" className="hover:text-blue-200 transition-colors">← Back to home</Link>
+        <p className="text-center text-white/70 text-sm mt-6">
+          <Link href="/" className="hover:text-white transition-colors">← Back to home</Link>
         </p>
       </motion.div>
     </div>

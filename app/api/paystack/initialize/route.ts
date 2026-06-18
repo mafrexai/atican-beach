@@ -1,32 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { initializeTransaction, isPaystackConfigured } from '@/lib/paystack'
+import { apiSuccess, apiError } from '@/lib/api/responses'
+import { initializePaymentSchema } from '@/lib/api/validation'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, amount, bookingReference, callbackUrl } = body as {
-      email: string
-      amount: number
-      bookingReference: string
-      callbackUrl?: string
+
+    // Validate input with Zod
+    const result = initializePaymentSchema.safeParse(body)
+    if (!result.success) {
+      const errors = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
+      return apiError(`Validation failed: ${errors}`, 400, 'VALIDATION_ERROR')
     }
 
-    if (!email || !amount || !bookingReference) {
-      return NextResponse.json(
-        { error: 'Missing required fields: email, amount, bookingReference' },
-        { status: 400 }
-      )
-    }
+    const { email, amount, bookingReference, callbackUrl } = result.data
 
-    // Check if Paystack is configured
     if (!isPaystackConfigured) {
-      return NextResponse.json(
-        { 
-          error: 'Payment system not configured. Please contact the administrator.',
-          code: 'PAYSTACK_NOT_CONFIGURED' 
-        },
-        { status: 503 }
+      return apiError(
+        'Payment system not configured. Please contact the administrator.',
+        503,
+        'PAYSTACK_NOT_CONFIGURED'
       )
     }
 
@@ -40,14 +35,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (bookingError || !booking) {
-      return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+      return apiError('Booking not found', 404, 'BOOKING_NOT_FOUND')
     }
 
     if (booking.status !== 'pending') {
-      return NextResponse.json(
-        { error: 'Booking is not in pending status' },
-        { status: 400 }
-      )
+      return apiError('Booking is not in pending status', 400, 'INVALID_BOOKING_STATUS')
     }
 
     // Initialize Paystack transaction
@@ -63,19 +55,18 @@ export async function POST(request: NextRequest) {
     })
 
     if (!response.status) {
-      return NextResponse.json(
-        { error: response.message || 'Payment initialization failed' },
-        { status: 400 }
-      )
+      return apiError(response.message || 'Payment initialization failed', 400, 'PAYSTACK_ERROR')
     }
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       authorization_url: response.data.authorization_url,
       reference: response.data.reference,
     })
   } catch (error) {
     console.error('Paystack initialize error:', error)
-    return NextResponse.json({ error: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` }, { status: 500 })
+    return apiError(
+      `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      500
+    )
   }
 }

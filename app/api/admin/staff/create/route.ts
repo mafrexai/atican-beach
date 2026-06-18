@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,13 +15,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name, email, and role are required' }, { status: 400 })
     }
 
-    const supabase = createAdminClient()
-
-    // Verify the requesting user is an admin
-    const { data: { user } } = await supabase.auth.getUser()
+    // Use server client to read user session from cookies
+    const serverSupabase = await createServerSupabaseClient()
+    const { data: { user } } = await serverSupabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
+
+    // Use admin client for write operations
+    const supabase = createAdminClient()
 
     const { data: adminRole } = await supabase
       .from('user_roles')
@@ -60,17 +62,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Failed to create user: ${authError.message}` }, { status: 500 })
     }
 
-    // Insert into user_roles
+    // Upsert into user_roles (handles duplicate user_id from existing guest roles)
     const { error: roleError } = await supabase
       .from('user_roles')
-      .insert({
-        user_id: newUser.user.id,
-        role,
-        staff_name: name,
-        staff_email: email,
-        is_active: true,
-        hire_date: new Date().toISOString().split('T')[0],
-      })
+      .upsert(
+        {
+          user_id: newUser.user.id,
+          role,
+          staff_name: name,
+          staff_email: email,
+          is_active: true,
+          hire_date: new Date().toISOString().split('T')[0],
+        },
+        { onConflict: 'user_id', ignoreDuplicates: false }
+      )
 
     if (roleError) {
       console.error('User role creation error:', roleError)

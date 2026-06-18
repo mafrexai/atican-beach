@@ -1,21 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase/server'
 import { generateConfirmationCode, generateBookingReference } from '@/lib/utils/bookingCodes'
 import { sendBookingConfirmation } from '@/lib/email/sendConfirmation'
 import QRCode from 'qrcode'
+import { apiSuccess, apiError } from '@/lib/api/responses'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { guestInfo, items, totalAmount, paymentReference, userId: bodyUserId } = body as {
+    const { guestInfo, items, totalAmount, paymentReference } = body as {
       guestInfo: { name: string; email: string; phone?: string; specialRequests?: string }
       items: Array<{ id: string; type: string; name: string; price: number; quantity: number; metadata?: Record<string, unknown> }>
       totalAmount: number
       paymentReference?: string
-      userId?: string
     }
 
-    // Use admin client to bypass RLS for booking creation
+    // Use server client to read session from cookies
+    const serverSupabase = await createServerSupabaseClient()
+    const { data: { user } } = await serverSupabase.auth.getUser()
+
+    if (!user) {
+      return apiError('Authentication required. Please log in to complete your booking.', 401)
+    }
+
+    const userId = user.id
+
+    // Use admin client for database operations (bypers RLS for writes)
     const supabase = createAdminClient()
 
     const bookingReference = generateBookingReference()
@@ -27,22 +37,6 @@ export async function POST(request: NextRequest) {
       guestName: guestInfo.name,
     })
     const qrCode = await QRCode.toDataURL(qrData)
-
-    // Get user ID — try session first, fall back to body for client-side auth
-    let userId: string | undefined
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      userId = user.id
-    } else if (bodyUserId && typeof bodyUserId === 'string') {
-      // Fallback: use userId from request body (passed from checkout page)
-      userId = bodyUserId
-      console.log('[Booking API] Using userId from request body:', userId)
-    } else {
-      return NextResponse.json(
-        { error: 'Authentication required. Please log in to complete your booking.' },
-        { status: 401 }
-      )
-    }
 
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
@@ -67,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     if (bookingError) {
       console.error('Booking creation error:', bookingError)
-      return NextResponse.json({ error: `Failed to create booking: ${bookingError.message}` }, { status: 500 })
+      return apiError(`Failed to create booking: ${bookingError.message}`, 500)
     }
 
     const bookingItems = items.map((item) => ({
@@ -87,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     if (itemsError) {
       console.error('Booking items error:', itemsError)
-      return NextResponse.json({ error: `Failed to save booking items: ${itemsError.message}` }, { status: 500 })
+      return apiError(`Failed to save booking items: ${itemsError.message}`, 500)
     }
 
     const emailPayload: {
@@ -116,17 +110,14 @@ export async function POST(request: NextRequest) {
 
     await sendBookingConfirmation(guestInfo.email, emailPayload)
 
-    return NextResponse.json({
-      success: true,
-      booking: {
-        reference: bookingReference,
-        confirmationCode,
-        qrCode,
-        totalAmount,
-      },
+    return apiSuccess({
+      reference: bookingReference,
+      confirmationCode,
+      qrCode,
+      totalAmount,
     })
   } catch (error) {
     console.error('Booking API error:', error)
-    return NextResponse.json({ error: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` }, { status: 500 })
+    return apiError(`Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}`, 500)
   }
 }

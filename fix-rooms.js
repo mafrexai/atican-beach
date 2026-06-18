@@ -1,0 +1,1 @@
+const fs=require(" fs\); const c=fs.readFileSync(\app/api/admin/rooms/images/route.ts\,\utf8\); const removed=c.replace(/\\/\\/ Ensure bucket exists before uploading[\\s\\S]*?await supabase\\.storage\\.createBucket\\(\atican-media\, \\{ public: true \\}\\)\\s*\\n/,\\); fs.writeFileSync(\app/api/admin/rooms/images/route.ts\,removed); console.log(\Done removed bucket check\);

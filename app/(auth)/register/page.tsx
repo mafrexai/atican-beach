@@ -47,10 +47,12 @@ function RegisterForm() {
 
     try {
       const supabase = createClient()
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
       const { error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: `${siteUrl}/login`,
           data: {
             full_name: formData.fullName,
           },

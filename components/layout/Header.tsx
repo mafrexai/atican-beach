@@ -88,11 +88,6 @@ export function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
-  // Hide global header on dashboard, admin, and staff routes
-  if (pathname?.startsWith('/dashboard') || pathname?.startsWith('/admin') || pathname?.startsWith('/staff')) {
-    return null
-  }
-
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -108,6 +103,11 @@ export function Header() {
     await signOut()
     setUserDropdownOpen(false)
     setMobileMenuOpen(false)
+  }
+
+  // Hide global header on dashboard, admin, and staff routes
+  if (pathname?.startsWith('/dashboard') || pathname?.startsWith('/admin') || pathname?.startsWith('/staff')) {
+    return null
   }
 
   return (

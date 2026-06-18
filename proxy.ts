@@ -62,24 +62,25 @@ export async function proxy(request: NextRequest) {
   const isAdminLoginRoute = pathname === '/admin/login'
   const isDashboardRoute = pathname.startsWith('/dashboard')
   const isCheckoutRoute = pathname.startsWith('/checkout')
+  const isStaffRoute = pathname.startsWith('/staff')
 
   // Skip all Supabase calls for admin login page — it's public
   if (isAdminLoginRoute) {
     return response
   }
 
-  // For non-admin, non-dashboard, non-checkout routes, skip Supabase entirely
-  if (!isAdminRoute && !isDashboardRoute && !isCheckoutRoute) {
+  // For non-protected routes, skip Supabase entirely
+  if (!isAdminRoute && !isDashboardRoute && !isCheckoutRoute && !isStaffRoute) {
     return response
   }
 
-  // If Supabase is not configured, allow access to admin routes (for development)
+  // If Supabase is not configured, allow access (for development)
   if (!supabaseUrl || !supabaseKey) {
     console.warn('⚠️ Supabase not configured - allowing access to protected route:', pathname)
     return response
   }
 
-  // Auth protection for admin and dashboard routes
+  // Create server client with cookie context
   const supabase = createServerClient(
     supabaseUrl,
     supabaseKey,
@@ -118,37 +119,39 @@ export async function proxy(request: NextRequest) {
       break
     } catch {
       if (attempt === 0) {
-        // Wait briefly before retry
         await new Promise((r) => setTimeout(r, 500))
       }
     }
   }
 
-  // Protect admin routes
+  // Protect admin routes — require admin role
   if (isAdminRoute) {
     if (!session) {
-      const redirectUrl = new URL('/admin/login', request.url)
-      return NextResponse.redirect(redirectUrl)
+      return NextResponse.redirect(new URL('/admin/login', request.url))
     }
-
     const admin = await isAdmin(supabase, session.user.id)
     if (!admin) {
       return NextResponse.redirect(new URL('/', request.url))
     }
   }
 
-  // Protect dashboard routes - redirect to login if not authenticated
+  // Protect dashboard routes — require authentication
   if (isDashboardRoute && !session) {
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Protect checkout route - redirect to login if not authenticated
+  // Protect checkout route — require authentication
   if (isCheckoutRoute && !session) {
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
+  }
+
+  // Protect staff routes — require authentication
+  if (isStaffRoute && !session) {
+    return NextResponse.redirect(new URL('/admin/login', request.url))
   }
 
   return response

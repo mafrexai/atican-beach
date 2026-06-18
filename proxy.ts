@@ -61,14 +61,15 @@ export async function proxy(request: NextRequest) {
   const isAdminRoute = pathname.startsWith('/admin')
   const isAdminLoginRoute = pathname === '/admin/login'
   const isDashboardRoute = pathname.startsWith('/dashboard')
+  const isCheckoutRoute = pathname.startsWith('/checkout')
 
   // Skip all Supabase calls for admin login page — it's public
   if (isAdminLoginRoute) {
     return response
   }
 
-  // For non-admin, non-dashboard routes, skip Supabase entirely
-  if (!isAdminRoute && !isDashboardRoute) {
+  // For non-admin, non-dashboard, non-checkout routes, skip Supabase entirely
+  if (!isAdminRoute && !isDashboardRoute && !isCheckoutRoute) {
     return response
   }
 
@@ -105,11 +106,23 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // Get session with timeout to prevent hanging
-  const { data: { session } } = await withTimeout(
-    supabase.auth.getSession(),
-    3000
-  ).catch(() => ({ data: { session: null } }))
+  // Get session with timeout and retry to prevent false negatives
+  let session = null
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const { data } = await withTimeout(
+        supabase.auth.getSession(),
+        5000
+      )
+      session = data.session
+      break
+    } catch {
+      if (attempt === 0) {
+        // Wait briefly before retry
+        await new Promise((r) => setTimeout(r, 500))
+      }
+    }
+  }
 
   // Protect admin routes
   if (isAdminRoute) {
@@ -126,6 +139,13 @@ export async function proxy(request: NextRequest) {
 
   // Protect dashboard routes - redirect to login if not authenticated
   if (isDashboardRoute && !session) {
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  // Protect checkout route - redirect to login if not authenticated
+  if (isCheckoutRoute && !session) {
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)

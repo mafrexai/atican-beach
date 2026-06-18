@@ -34,8 +34,8 @@ function LoginForm() {
         throw new Error(authError.message)
       }
 
-      router.push(redirectTo)
-      router.refresh()
+      // Use window.location for full page reload to ensure session cookies are set
+      window.location.href = redirectTo
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign in')
     } finally {

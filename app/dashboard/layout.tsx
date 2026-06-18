@@ -16,8 +16,11 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-[#F5F1E8]">
+      {/* Dashboard-specific header */}
       <DashboardHeader />
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 pt-24">
+
+      {/* Main content with proper spacing */}
+      <main className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
         {children}
       </main>
     </div>

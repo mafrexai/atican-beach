@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { generateConfirmationCode, generateBookingReference } from '@/lib/utils/bookingCodes'
 import { sendBookingConfirmation } from '@/lib/email/sendConfirmation'
 import QRCode from 'qrcode'
@@ -7,14 +7,16 @@ import QRCode from 'qrcode'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { guestInfo, items, totalAmount, paymentReference } = body as {
+    const { guestInfo, items, totalAmount, paymentReference, userId: bodyUserId } = body as {
       guestInfo: { name: string; email: string; phone?: string; specialRequests?: string }
       items: Array<{ id: string; type: string; name: string; price: number; quantity: number; metadata?: Record<string, unknown> }>
       totalAmount: number
       paymentReference?: string
+      userId?: string
     }
 
-    const supabase = await createServerSupabaseClient()
+    // Use admin client to bypass RLS for booking creation
+    const supabase = createAdminClient()
 
     const bookingReference = generateBookingReference()
     const confirmationCode = generateConfirmationCode()
@@ -26,14 +28,28 @@ export async function POST(request: NextRequest) {
     })
     const qrCode = await QRCode.toDataURL(qrData)
 
+    // Get user ID — try session first, fall back to body for client-side auth
+    let userId: string | undefined
     const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      userId = user.id
+    } else if (bodyUserId && typeof bodyUserId === 'string') {
+      // Fallback: use userId from request body (passed from checkout page)
+      userId = bodyUserId
+      console.log('[Booking API] Using userId from request body:', userId)
+    } else {
+      return NextResponse.json(
+        { error: 'Authentication required. Please log in to complete your booking.' },
+        { status: 401 }
+      )
+    }
 
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .insert({
         booking_reference: bookingReference,
         confirmation_code: confirmationCode,
-        user_id: user?.id ?? null,
+        user_id: userId,
         guest_name: guestInfo.name,
         guest_email: guestInfo.email,
         guest_phone: guestInfo.phone ?? null,
@@ -51,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     if (bookingError) {
       console.error('Booking creation error:', bookingError)
-      return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 })
+      return NextResponse.json({ error: `Failed to create booking: ${bookingError.message}` }, { status: 500 })
     }
 
     const bookingItems = items.map((item) => ({
@@ -71,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     if (itemsError) {
       console.error('Booking items error:', itemsError)
-      return NextResponse.json({ error: 'Failed to save booking items' }, { status: 500 })
+      return NextResponse.json({ error: `Failed to save booking items: ${itemsError.message}` }, { status: 500 })
     }
 
     const emailPayload: {
@@ -111,6 +127,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Booking API error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` }, { status: 500 })
   }
 }

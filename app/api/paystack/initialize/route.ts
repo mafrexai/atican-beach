@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { initializeTransaction, isPaystackConfigured } from '@/lib/paystack'
 
 export async function POST(request: NextRequest) {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createServerSupabaseClient()
+    const supabase = createAdminClient()
 
     // Verify booking exists and is in pending status
     const { data: booking, error: bookingError } = await supabase
@@ -76,6 +76,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Paystack initialize error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` }, { status: 500 })
   }
 }

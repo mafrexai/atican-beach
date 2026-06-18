@@ -6,38 +6,23 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import {
   LayoutDashboard,
-  BedDouble,
-  Tent,
-  Sparkles,
-  Image,
-  Users,
-  Settings,
-  Waves,
+  CalendarPlus,
+  LogIn,
   LogOut,
+  Users,
+  LogOut as LogoutIcon,
   Menu,
   X,
-  UserCheck,
-  UserPlus,
+  Waves,
 } from 'lucide-react'
 
-const adminNavItems = [
-  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { name: 'Bookings', href: '/admin/bookings', icon: LayoutDashboard },
-  { name: 'Rooms', href: '/admin/rooms', icon: BedDouble },
-  { name: 'Tents', href: '/admin/tents', icon: Tent },
-  { name: 'Experiences', href: '/admin/experiences', icon: Sparkles },
-  { name: 'Batch Upload', href: '/admin/batch-upload', icon: Image },
-  { name: 'Staff', href: '/admin/staff', icon: UserCheck },
-  { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
+const staffNavItems = [
+  { name: 'Dashboard', href: '/staff/dashboard', icon: LayoutDashboard },
+  { name: 'Walk-in Booking', href: '/staff/book', icon: CalendarPlus },
+  { name: 'Check-in/out', href: '/staff/check-in', icon: LogIn },
 ]
 
-const staffSubItems = [
-  { name: 'All Staff', href: '/admin/staff', icon: Users },
-  { name: 'Add Staff', href: '/admin/staff/add', icon: UserPlus },
-]
-
-export default function AdminLayout({
+export default function StaffLayout({
   children,
 }: {
   children: React.ReactNode
@@ -48,17 +33,9 @@ export default function AdminLayout({
   const router = useRouter()
   const pathname = usePathname()
 
-  // Stable Supabase client - VERY IMPORTANT
   const supabase = useMemo(() => createClient(), [])
 
-  const isLoginPage = pathname === '/admin/login'
-
   useEffect(() => {
-    if (isLoginPage) {
-      setLoading(false)
-      return
-    }
-
     async function checkAuth() {
       try {
         const { data: { session } } = await supabase.auth.getSession()
@@ -68,62 +45,45 @@ export default function AdminLayout({
           return
         }
 
-        // Check user_roles first
+        // Check user_roles for admin or front_desk
         const { data: userRole } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', session.user.id)
           .single()
 
-        if (userRole?.role === 'admin') {
+        if (userRole?.role === 'admin' || userRole?.role === 'front_desk') {
           setUserEmail(session.user.email || '')
           setLoading(false)
           return
         }
 
-        // Fallback: check profiles table
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
-
-        if (profile?.role === 'admin') {
-          setUserEmail(session.user.email || '')
-          setLoading(false)
-          return
-        }
-
-        // Not admin
+        // Not authorized
         await supabase.auth.signOut()
         router.push('/admin/login')
       } catch (error) {
-        console.error('Admin layout auth error:', error)
+        console.error('Staff layout auth error:', error)
         router.push('/admin/login')
       }
     }
 
     checkAuth()
-  }, [router, supabase, isLoginPage])
+  }, [router, supabase])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/admin/login')
   }
 
-  if (loading && !isLoginPage) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-[#0A3D62] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading admin panel...</p>
+          <p className="text-gray-500">Loading staff portal...</p>
         </div>
       </div>
     )
-  }
-
-  if (isLoginPage) {
-    return <>{children}</>
   }
 
   return (
@@ -146,11 +106,11 @@ export default function AdminLayout({
           {/* Sidebar header */}
           <div className="p-4 border-b border-[#0A3D62]">
             <div className="flex items-center justify-between">
-              <Link href="/admin" className="flex items-center gap-2">
+              <Link href="/staff/dashboard" className="flex items-center gap-2">
                 <Waves className="w-6 h-6 text-[#D4AF37]" />
                 <div>
                   <h2 className="text-lg font-bold">Atican Beach</h2>
-                  <p className="text-xs text-gray-400">Admin Portal</p>
+                  <p className="text-xs text-gray-400">Staff Portal</p>
                 </div>
               </Link>
               <button
@@ -164,47 +124,22 @@ export default function AdminLayout({
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-4">
-            {adminNavItems.map((item) => {
-              const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href))
-              const isStaffSection = item.href === '/admin/staff'
-              const showStaffSubItems = isStaffSection && (isActive || pathname.startsWith('/admin/staff'))
+            {staffNavItems.map((item) => {
+              const isActive = pathname === item.href || (item.href !== '/staff/dashboard' && pathname.startsWith(item.href))
               return (
-                <div key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-[#0A3D62] text-white'
-                        : 'text-gray-300 hover:bg-[#0A3D62]/50 hover:text-white'
-                    }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="text-sm font-medium">{item.name}</span>
-                  </Link>
-                  {showStaffSubItems && (
-                    <div className="ml-6 mt-1 space-y-1">
-                      {staffSubItems.map((subItem) => {
-                        const isSubActive = pathname === subItem.href
-                        return (
-                          <Link
-                            key={subItem.href}
-                            href={subItem.href}
-                            onClick={() => setSidebarOpen(false)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${
-                              isSubActive
-                                ? 'bg-[#0A3D62]/50 text-white'
-                                : 'text-gray-400 hover:bg-[#0A3D62]/30 hover:text-white'
-                            }`}
-                          >
-                            <subItem.icon className="w-4 h-4" />
-                            <span>{subItem.name}</span>
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-[#0A3D62] text-white'
+                      : 'text-gray-300 hover:bg-[#0A3D62]/50 hover:text-white'
+                  }`}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-sm font-medium">{item.name}</span>
+                </Link>
               )
             })}
           </nav>
@@ -219,14 +154,14 @@ export default function AdminLayout({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{userEmail}</p>
-                <p className="text-xs text-gray-400">Administrator</p>
+                <p className="text-xs text-gray-400">Staff</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition"
             >
-              <LogOut className="w-4 h-4" />
+              <LogoutIcon className="w-4 h-4" />
               <span>Logout</span>
             </button>
           </div>

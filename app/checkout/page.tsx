@@ -1,13 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { CreditCard, Loader2, AlertCircle, Info, CheckCircle, Trash2 } from 'lucide-react'
 import { useCartStore } from '@/stores/cartStore'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F1E8]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#0A3D62] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading checkout...</p>
+        </div>
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
+  )
+}
+
+function CheckoutContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { user, loading: authLoading, authResolved } = useAuth()
   const items = useCartStore((s) => s.items)
   const getTotal = useCartStore((s) => s.getTotal)
   const clearCart = useCartStore((s) => s.clearCart)
@@ -24,6 +42,26 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null)
   const [paystackConfigured, setPaystackConfigured] = useState<boolean | null>(null)
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null)
+
+  // Redirect to login if not authenticated — only after auth has fully resolved
+  useEffect(() => {
+    if (authResolved && !user) {
+      const redirect = searchParams.toString()
+      const loginUrl = `/login?redirect=/checkout${redirect ? '&' + redirect : ''}`
+      router.push(loginUrl)
+    }
+  }, [authResolved, user, router, searchParams])
+
+  // Pre-fill form with user data
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        email: user.email || prev.email,
+        name: user.full_name || prev.name,
+      }))
+    }
+  }, [user])
 
   const total = getTotal()
 
@@ -64,11 +102,21 @@ export default function CheckoutPage() {
     setLoading(true)
     setError(null)
 
+    // Debug: log auth state
+    console.log('[Checkout] User:', user?.email, 'ID:', user?.id)
+
+    if (!user) {
+      setError('Please log in to complete your booking')
+      setLoading(false)
+      return
+    }
+
     try {
       // Step 1: Create booking first
       const bookingRes = await fetch('/api/bookings/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           guestInfo: {
             name: formData.name,
@@ -85,10 +133,13 @@ export default function CheckoutPage() {
             metadata: item.metadata,
           })),
           totalAmount: total,
+          userId: user.id,
         }),
       })
 
+      console.log('[Checkout] Booking response status:', bookingRes.status)
       const bookingData = await bookingRes.json()
+      console.log('[Checkout] Booking response:', bookingData)
 
       if (!bookingData.success) {
         throw new Error(bookingData.error || 'Failed to create booking')
@@ -106,11 +157,12 @@ export default function CheckoutPage() {
       const paystackRes = await fetch('/api/paystack/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           email: formData.email,
           amount: total,
           bookingReference: bookingData.booking.reference,
-          callbackUrl: `${window.location.origin}/booking/confirmation?ref=${bookingData.booking.reference}`,
+          callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/booking/confirmation?ref=${bookingData.booking.reference}`,
         }),
       })
 
@@ -253,38 +305,38 @@ export default function CheckoutPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-              <input
-                type="text"
-                name="name"
-                required
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
-                placeholder="John Doe"
-              />
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
+                    placeholder="John Doe"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-              <input
-                type="email"
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
-                placeholder="john@example.com"
-              />
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
+                    placeholder="john@example.com"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
-                placeholder="+234 800 000 0000"
-              />
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900 placeholder:text-gray-400"
+                    placeholder="+234 800 000 0000"
+                  />
                 </div>
               </div>
               <div>

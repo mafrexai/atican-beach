@@ -5,10 +5,10 @@ const NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_
 
 export const isPaystackConfigured = !!(PAYSTACK_SECRET_KEY && NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY)
 
-let paystack: Paystack | null = null
+let paystack: any = null
 
 if (isPaystackConfigured && PAYSTACK_SECRET_KEY) {
-  paystack = new Paystack({ secretKey: PAYSTACK_SECRET_KEY })
+  paystack = new (Paystack as any)(PAYSTACK_SECRET_KEY)
 }
 
 export interface PaystackInitializeParams {
@@ -39,7 +39,7 @@ export async function initializeTransaction(params: PaystackInitializeParams): P
   }
 
   try {
-    const response = await paystack.initialize({
+    const response = await paystack.transaction.initialize({
       email: params.email,
       amount: params.amount * 100, // Convert Naira to Kobo
       reference: params.reference,
@@ -72,7 +72,7 @@ export async function verifyTransaction(reference: string): Promise<{
   }
 
   try {
-    const response = await paystack.verify({ reference })
+    const response = await paystack.transaction.verify({ reference })
     return response as any
   } catch (error: any) {
     console.error('Paystack verify error:', error)

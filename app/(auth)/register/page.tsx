@@ -1,14 +1,16 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Waves, Mail, Lock, User, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || '/dashboard'
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -70,7 +72,7 @@ export default function RegisterPage() {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push('/dashboard')
+        router.push(`/login?redirect=${encodeURIComponent(redirectTo)}`)
       }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account')
@@ -89,7 +91,7 @@ export default function RegisterPage() {
         >
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-[#082032] mb-2">Account Created!</h1>
-          <p className="text-gray-600">Your account has been created successfully. Redirecting to dashboard...</p>
+          <p className="text-gray-600">Your account has been created successfully. Redirecting to login...</p>
         </motion.div>
       </div>
     )
@@ -202,7 +204,7 @@ export default function RegisterPage() {
 
           <div className="mt-6 text-center text-sm text-gray-500">
             Already have an account?{' '}
-            <Link href="/login" className="text-[#0A3D62] font-medium hover:underline">
+            <Link href={`/login?redirect=${encodeURIComponent(redirectTo)}`} className="text-[#0A3D62] font-medium hover:underline">
               Sign in
             </Link>
           </div>
@@ -213,5 +215,20 @@ export default function RegisterPage() {
         </p>
       </motion.div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A3D62] via-[#082032] to-[#0A3D62]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white/60">Loading...</p>
+        </div>
+      </div>
+    }>
+      <RegisterForm />
+    </Suspense>
   )
 }

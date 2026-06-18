@@ -4,70 +4,56 @@ import { useState, useCallback, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
-  Upload, X, Star, Trash2, GripVertical, Image as ImageIcon,
-  AlertTriangle, Check, Loader2, ArrowLeft, ZoomIn
+  Upload, X, Star, Trash2, Image as ImageIcon,
+  AlertTriangle, Loader2, ArrowLeft, ZoomIn
 } from 'lucide-react'
 
-interface RoomImage {
+interface ExperienceImage {
   url: string
   path: string
-  metadata?: { width: number; height: number; size: number; type: string }
 }
 
-export default function RoomMediaPage() {
+export default function ExperienceMediaPage() {
   const params = useParams()
   const router = useRouter()
-  const roomId = params.id as string
+  const experienceId = params.id as string
 
-  const [room, setRoom] = useState<{ room_number: string; room_type: string; image_url: string | null; gallery_images: string[] } | null>(null)
-  const [images, setImages] = useState<RoomImage[]>([])
+  const [experience, setExperience] = useState<{ name: string; image_url: string | null } | null>(null)
+  const [images, setImages] = useState<ExperienceImage[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [dragOver, setDragOver] = useState(false)
   const [lightboxImage, setLightboxImage] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
-  // Fetch room data
   useEffect(() => {
-    async function fetchRoom() {
-      const res = await fetch(`/api/admin/rooms/${roomId}`)
+    async function fetchExperience() {
+      const res = await fetch(`/api/admin/experiences/${experienceId}`)
       if (res.ok) {
         const data = await res.json()
-        setRoom(data.room)
-        const allImages: RoomImage[] = []
-        if (data.room.image_url) {
-          allImages.push({ url: data.room.image_url, path: data.room.image_url })
+        setExperience(data.experience)
+        if (data.experience.image_url) {
+          setImages([{ url: data.experience.image_url, path: data.experience.image_url }])
         }
-        if (data.room.gallery_images) {
-          data.room.gallery_images.forEach((url: string) => {
-            if (url !== data.room.image_url) {
-              allImages.push({ url, path: url })
-            }
-          })
-        }
-        setImages(allImages)
       }
       setLoading(false)
     }
-    fetchRoom()
-  }, [roomId])
+    fetchExperience()
+  }, [experienceId])
 
-  // Handle file drop
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault()
     setDragOver(false)
-
     const files = Array.from(e.dataTransfer.files).filter((f) =>
       ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
     )
-
     if (files.length > 0) {
       await uploadFiles(files)
     }
   }, [])
 
-  // Handle file input
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length > 0) {
@@ -75,46 +61,38 @@ export default function RoomMediaPage() {
     }
   }
 
-  // Re-fetch room data from database
-  async function refreshRoomData() {
+  // Re-fetch experience data from database
+  async function refreshExperienceData() {
     try {
-      const res = await fetch(`/api/admin/rooms/${roomId}`)
+      const res = await fetch(`/api/admin/experiences/${experienceId}`)
       if (res.ok) {
         const data = await res.json()
-        setRoom(data.room)
-        const allImages: RoomImage[] = []
-        if (data.room.image_url) {
-          allImages.push({ url: data.room.image_url, path: data.room.image_url })
+        setExperience(data.experience)
+        if (data.experience.image_url) {
+          setImages([{ url: data.experience.image_url, path: data.experience.image_url }])
+        } else {
+          setImages([])
         }
-        if (data.room.gallery_images) {
-          data.room.gallery_images.forEach((url: string) => {
-            if (url !== data.room.image_url) {
-              allImages.push({ url, path: url })
-            }
-          })
-        }
-        setImages(allImages)
       }
     } catch (err) {
-      console.error('Failed to refresh room data:', err)
+      console.error('Failed to refresh experience data:', err)
     }
   }
 
-  // Upload files
   async function uploadFiles(files: File[]) {
     setIsUploading(true)
     setUploadProgress(0)
-    let uploadError = false
+    setUploadError(null)
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       if (!file) continue
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('roomId', roomId)
+      formData.append('experienceId', experienceId)
 
       try {
-        const res = await fetch('/api/admin/rooms/images', {
+        const res = await fetch('/api/admin/experiences/images', {
           method: 'POST',
           body: formData,
         })
@@ -123,11 +101,11 @@ export default function RoomMediaPage() {
 
         if (!res.ok || !data.success) {
           console.error('Upload failed:', data.error)
-          uploadError = true
+          setUploadError(data.error || 'Upload failed')
         }
       } catch (err) {
         console.error('Upload failed:', err)
-        uploadError = true
+        setUploadError(err instanceof Error ? err.message : 'Upload failed')
       }
 
       setUploadProgress(((i + 1) / files.length) * 100)
@@ -137,18 +115,17 @@ export default function RoomMediaPage() {
     setUploadProgress(0)
 
     // Always re-fetch from database after uploads complete
-    await refreshRoomData()
+    await refreshExperienceData()
   }
 
-  // Delete image
   async function deleteImage(url: string) {
     try {
-      await fetch(`/api/admin/rooms/images?url=${encodeURIComponent(url)}&roomId=${roomId}`, {
+      await fetch(`/api/admin/experiences/images?url=${encodeURIComponent(url)}&experienceId=${experienceId}`, {
         method: 'DELETE',
       })
       setImages((prev) => prev.filter((img) => img.url !== url))
-      if (room?.image_url === url) {
-        setRoom((prev) => prev ? { ...prev, image_url: null } : null)
+      if (experience?.image_url === url) {
+        setExperience((prev) => prev ? { ...prev, image_url: null } : null)
       }
     } catch (err) {
       console.error('Delete failed:', err)
@@ -156,78 +133,50 @@ export default function RoomMediaPage() {
     setDeleteConfirm(null)
   }
 
-  // Set featured image
   async function setFeatured(url: string) {
     try {
-      await fetch('/api/admin/rooms/images', {
+      await fetch('/api/admin/experiences/images', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, action: 'setFeatured', imageUrl: url }),
+        body: JSON.stringify({ experienceId, action: 'setFeatured', imageUrl: url }),
       })
-      setRoom((prev) => prev ? { ...prev, image_url: url } : null)
+      setExperience((prev) => prev ? { ...prev, image_url: url } : null)
     } catch (err) {
       console.error('Set featured failed:', err)
     }
   }
 
-  // Reorder gallery
-  async function reorderGallery(newImages: RoomImage[]) {
-    const urls = newImages.map((img) => img.url)
-    try {
-      await fetch('/api/admin/rooms/images', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, action: 'reorder', galleryImages: urls }),
-      })
-    } catch (err) {
-      console.error('Reorder failed:', err)
-    }
-  }
-
-  function moveImage(index: number, direction: 'up' | 'down') {
-    const newImages = [...images]
-    const targetIndex = direction === 'up' ? index - 1 : index + 1
-    if (targetIndex < 0 || targetIndex >= newImages.length) return
-    const temp = newImages[index]!
-    newImages[index] = newImages[targetIndex]!
-    newImages[targetIndex] = temp
-    setImages(newImages)
-    reorderGallery(newImages)
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <button
-          onClick={() => router.push('/admin/rooms')}
+          onClick={() => router.push('/admin/experiences')}
           className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Room Media — {room?.room_type} #{room?.room_number}
+            Experience Media — {experience?.name}
           </h1>
           <p className="text-gray-500 text-sm">{images.length} image{images.length !== 1 ? 's' : ''} uploaded</p>
         </div>
       </div>
 
-      {/* Upload Zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-          dragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+          dragOver ? 'border-purple-500 bg-purple-50' : 'border-gray-300 hover:border-gray-400'
         }`}
       >
         <input
@@ -243,13 +192,13 @@ export default function RoomMediaPage() {
           <p className="text-gray-600 font-medium">
             {isUploading ? `Uploading... ${Math.round(uploadProgress)}%` : 'Drop images here or click to upload'}
           </p>
-          <p className="text-gray-400 text-sm mt-1">JPEG, PNG, WebP · Max 5MB each · Max 20 images per room</p>
+          <p className="text-gray-400 text-sm mt-1">JPEG, PNG, WebP · Max 5MB each</p>
         </label>
         {isUploading && (
           <div className="mt-4 max-w-xs mx-auto">
             <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-600 transition-all duration-300"
+                className="h-full bg-purple-500 transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
@@ -257,26 +206,34 @@ export default function RoomMediaPage() {
         )}
       </div>
 
-      {/* Image Gallery */}
+      {uploadError && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 text-red-700 rounded-lg">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <span className="text-sm">{uploadError}</span>
+          <button onClick={() => setUploadError(null)} className="ml-auto text-red-500 hover:text-red-700">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {images.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {images.map((image, index) => {
-            const isFeatured = image.url === room?.image_url
+            const isFeatured = image.url === experience?.image_url
             return (
               <div
                 key={image.url}
                 className={`relative group rounded-xl overflow-hidden border-2 transition-colors ${
-                  isFeatured ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-gray-300'
+                  isFeatured ? 'border-purple-500 ring-2 ring-purple-200' : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                {/* Image */}
                 <div
                   className="aspect-square bg-gray-100 cursor-pointer relative"
                   onClick={() => setLightboxImage(image.url)}
                 >
                   <Image
                     src={image.url}
-                    alt={`Room image ${index + 1}`}
+                    alt={`Experience image ${index + 1}`}
                     fill
                     className="object-cover"
                     sizes="(max-width: 768px) 50vw, 25vw"
@@ -285,34 +242,22 @@ export default function RoomMediaPage() {
                     <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
-
-                {/* Featured badge */}
                 {isFeatured && (
-                  <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                  <div className="absolute top-2 left-2 bg-purple-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
                     <Star className="w-3 h-3 fill-current" />
                     Featured
                   </div>
                 )}
-
-                {/* Actions overlay */}
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {!isFeatured && (
                     <button
                       onClick={() => setFeatured(image.url)}
-                      className="p-1.5 bg-white rounded-lg shadow hover:bg-blue-50 transition-colors"
+                      className="p-1.5 bg-white rounded-lg shadow hover:bg-purple-50 transition-colors"
                       title="Set as featured"
                     >
                       <Star className="w-4 h-4 text-gray-600" />
                     </button>
                   )}
-                  <button
-                    onClick={() => moveImage(index, 'up')}
-                    disabled={index === 0}
-                    className="p-1.5 bg-white rounded-lg shadow hover:bg-gray-50 transition-colors disabled:opacity-30"
-                    title="Move up"
-                  >
-                    <GripVertical className="w-4 h-4 text-gray-600" />
-                  </button>
                   <button
                     onClick={() => setDeleteConfirm(image.url)}
                     className="p-1.5 bg-white rounded-lg shadow hover:bg-red-50 transition-colors"
@@ -321,8 +266,6 @@ export default function RoomMediaPage() {
                     <Trash2 className="w-4 h-4 text-red-500" />
                   </button>
                 </div>
-
-                {/* Delete confirmation */}
                 {deleteConfirm === image.url && (
                   <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 p-4">
                     <p className="text-white text-sm text-center">Delete this image?</p>
@@ -354,7 +297,6 @@ export default function RoomMediaPage() {
         </div>
       )}
 
-      {/* Lightbox */}
       {lightboxImage && (
         <div
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"

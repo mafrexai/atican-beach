@@ -56,11 +56,11 @@ export function DatePicker({
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:border-blue-400 transition-colors bg-white text-left"
-      >
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:border-[#0A3D62] transition-colors bg-white text-left text-gray-900"
+        >
         <CalendarIcon className="w-5 h-5 text-gray-400 shrink-0" />
         <div className="flex-1 min-w-0">
           {checkIn && checkOut ? (
@@ -92,7 +92,7 @@ export function DatePicker({
             .rdp-nav_button_next { position: absolute; right: 0; }
             .rdp-table { width: 100%; }
             .rdp-head_cell { font-size: 0.75rem; color: #6b7280; font-weight: 400; }
-            .rdp-day { width: 36px; height: 36px; border-radius: 6px; font-size: 0.875rem; }
+            .rdp-day { width: 36px; height: 36px; border-radius: 6px; font-size: 0.875rem; color: #111827; }
             .rdp-day_selected { background-color: #2563eb; color: white; }
             .rdp-day_today { background-color: #eff6ff; color: #2563eb; font-weight: 700; }
             .rdp-day_outside { color: #d1d5db; opacity: 0.5; }

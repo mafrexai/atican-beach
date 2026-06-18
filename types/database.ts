@@ -1,12 +1,26 @@
 export type RoomType = 'Standard' | 'Deluxe' | 'Double Bed' | 'Family' | 'Executive' | 'Premium Suite' | 'Executive Suite' | 'Presidential Suite'
 
+export type UserRole = 'admin' | 'staff' | 'guest' | 'front_desk'
+
 export interface Profile {
   id: string
   full_name: string
   phone: string | null
-  role: 'guest' | 'admin'
+  role: UserRole
   created_at: string
   updated_at: string
+}
+
+export interface UserRoleRecord {
+  id: string
+  user_id: string
+  role: UserRole
+  staff_name: string | null
+  staff_email: string | null
+  shift: string | null
+  is_active: boolean
+  hire_date: string | null
+  created_at: string
 }
 
 export interface Room {
@@ -96,6 +110,12 @@ export interface Booking {
   special_requests: string | null
   created_at: string
   updated_at: string
+  // Staff dashboard fields
+  created_by: string | null
+  checked_in_at: string | null
+  checked_out_at: string | null
+  confirmed_by: string | null
+  booking_type: 'online' | 'walk_in'
 }
 
 export interface BookingItem {
@@ -108,6 +128,24 @@ export interface BookingItem {
   start_date: string | null
   end_date: string | null
   metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface BookingComment {
+  id: string
+  booking_id: string
+  user_id: string | null
+  comment: string
+  is_internal: boolean
+  created_at: string
+}
+
+export interface BookingActivityLog {
+  id: string
+  booking_id: string
+  user_id: string | null
+  action: string
+  details: Record<string, unknown> | null
   created_at: string
 }
 

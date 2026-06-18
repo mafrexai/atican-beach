@@ -81,7 +81,7 @@ export function AddToCartButton({ room }: AddToCartButtonProps) {
         <select
           value={guests}
           onChange={(e) => setGuests(Number(e.target.value))}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-gray-900"
         >
           {Array.from({ length: room.max_occupancy }, (_, i) => i + 1).map((n) => (
             <option key={n} value={n}>

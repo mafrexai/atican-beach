@@ -1,6 +1,7 @@
 import { getRooms, getRoomTypes } from '@/lib/supabase/queries'
 import { Waves, Users, Search, SlidersHorizontal } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 const roomTypeColors: Record<string, string> = {
   'Standard': 'from-gray-400 to-gray-500',
@@ -183,10 +184,12 @@ export default async function RoomsPage({
                 <Link href={`/rooms/${room.id}`}>
                   <div className={`h-48 bg-gradient-to-br ${roomTypeColors[room.room_type] || 'from-gray-400 to-gray-500'} flex items-center justify-center relative overflow-hidden`}>
                     {room.image_url ? (
-                      <img
+                      <Image
                         src={room.image_url}
                         alt={room.image_alt || room.room_type}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       />
                     ) : (
                       <Waves className="w-16 h-16 text-white/50" />

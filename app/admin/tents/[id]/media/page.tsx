@@ -30,7 +30,10 @@ export default function TentMediaPage() {
 
   useEffect(() => {
     async function fetchTent() {
-      const res = await fetch(`/api/admin/tents/${tentId}`)
+      // const res = await fetch(`/api/admin/tents/${tentId}`)
+      const timestamp = Date.now()
+      const res = await fetch(`/api/admin/tents/${tentId}?t=${timestamp}`, { cache: 'no-store' })
+
       if (res.ok) {
         const data = await res.json()
         setTent(data.tent)

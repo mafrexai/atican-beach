@@ -64,7 +64,10 @@ export default function ExperienceMediaPage() {
   // Re-fetch experience data from database
   async function refreshExperienceData() {
     try {
-      const res = await fetch(`/api/admin/experiences/${experienceId}`)
+      // const res = await fetch(`/api/admin/experiences/${experienceId}`)
+      const timestamp = Date.now()
+      const res = await fetch(`/api/admin/experiences/${experienceId}?t=${timestamp}`, { cache: 'no-store' })
+
       if (res.ok) {
         const data = await res.json()
         setExperience(data.experience)

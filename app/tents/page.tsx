@@ -1,5 +1,6 @@
 import { getTents } from '@/lib/supabase/queries'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Tent, Users, ChevronRight, Armchair } from 'lucide-react'
 
 export default async function TentsPage() {
@@ -40,8 +41,18 @@ export default async function TentsPage() {
                   key={tent.id}
                   className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
                 >
-                  <div className="h-48 bg-gradient-to-br from-[#D4AF37] to-[#F97316] flex items-center justify-center">
-                    <Tent className="w-16 h-16 text-white/50" />
+                  <div className="h-48 bg-gradient-to-br from-[#D4AF37] to-[#F97316] flex items-center justify-center relative overflow-hidden">
+                    {tent.image_url ? (
+                      <Image
+                        src={tent.image_url}
+                        alt={tent.image_alt || tent.tent_name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      />
+                    ) : (
+                      <Tent className="w-16 h-16 text-white/50" />
+                    )}
                   </div>
                   <div className="p-5">
                     <h3 className="font-bold text-[#082032] text-lg mb-2">{tent.tent_name}</h3>

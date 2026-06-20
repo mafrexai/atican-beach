@@ -1,12 +1,15 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 // Check Supabase environment variables early
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
 
 if (!supabaseUrl || !supabaseKey) {
-  console.warn('⚠️ Supabase environment variables not configured')
+  console.warn('Supabase environment variables not configured')
 }
 
 export const createServerSupabaseClient = async () => {
@@ -56,8 +59,10 @@ export const createServerSupabaseClient = async () => {
 }
 
 export const createAdminClient = () => {
-  // Return a mock client if Supabase is not configured
-  if (!supabaseUrl || !supabaseKey) {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!serviceRoleKey || !supabaseUrl) {
+    console.error('SUPABASE_SERVICE_ROLE_KEY is not set!')
     return {
       auth: {
         getUser: async () => ({ data: { user: null } }),
@@ -70,14 +75,13 @@ export const createAdminClient = () => {
     } as any
   }
 
-  return createServerClient(
+  return createClient(
     supabaseUrl,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey,
+    serviceRoleKey,
     {
-      cookies: {
-        get() { return undefined },
-        set() {},
-        remove() {},
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
     }
   )

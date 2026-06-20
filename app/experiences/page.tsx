@@ -1,5 +1,6 @@
 import { getExperiences } from '@/lib/supabase/queries'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Sparkles, Flame, Bike, Waves, TreePine, ChevronRight } from 'lucide-react'
 
 const experienceIcons: Record<string, typeof Flame> = {
@@ -49,8 +50,18 @@ export default async function ExperiencesPage() {
                     key={exp.id}
                     className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
                   >
-                    <div className="h-48 bg-gradient-to-br from-[#F97316] to-[#D4AF37] flex items-center justify-center">
-                      <Icon className="w-16 h-16 text-white/50" />
+                    <div className="h-48 bg-gradient-to-br from-[#F97316] to-[#D4AF37] flex items-center justify-center relative overflow-hidden">
+                      {exp.image_url ? (
+                        <Image
+                          src={exp.image_url}
+                          alt={exp.image_alt || exp.name}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        />
+                      ) : (
+                        <Icon className="w-16 h-16 text-white/50" />
+                      )}
                     </div>
                     <div className="p-5">
                       <h3 className="font-bold text-[#082032] text-lg mb-1">{exp.name}</h3>

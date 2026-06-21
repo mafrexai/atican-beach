@@ -18,7 +18,7 @@ export function Footer() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[#D4AF37]" />
-                <span>Beachfront, Atican</span>
+                <span>Abraham Adesanya Road, in Okun-Ajah, Lekki, Lagos, Nigeria</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-[#D4AF37]" />
@@ -26,7 +26,7 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#D4AF37]" />
-                <span>info@aticanbeach.com</span>
+                <span>info@aticanbeachresort.com</span>
               </div>
             </div>
           </div>

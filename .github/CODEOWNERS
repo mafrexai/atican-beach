@@ -1,0 +1,11 @@
+# Default owner
+* @mafrexai
+
+# Admin specific
+/app/admin @mafrexai
+
+# API specific  
+/app/api @mafrexai
+
+# Core libraries
+/lib @mafrexai

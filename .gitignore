@@ -1,39 +1,46 @@
 # Dependencies
 node_modules/
-.pnp
+/.pnp
 .pnp.js
 
-# Next.js build output
-.next/
-out/
-build/
-dist/
+# Next.js
+/.next/
+/out/
+/build/
+/dist/
 
 # Environment files
 .env.local
 .env*.local
+.env
 
-# TypeScript
-*.tsbuildinfo
-
-# Logs
-*.log
-npm-debug.log*
-
-# OS files
-.DS_Store
-Thumbs.db
+# Continue config with secrets - NEVER commit this!
+.continue/
+.continue/config.yaml
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Vercel
 .vercel
 
-# Temporary files
-*.tmp
-.cache
+# Supabase
+supabase/.temp
 
-.vercel
-.env*
+# Temporary
+.cache
+*.temp

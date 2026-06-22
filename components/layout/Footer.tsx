@@ -12,8 +12,9 @@ export function Footer() {
               <span className="text-xl font-bold text-white">Atican Beach Resort</span>
             </div>
             <p className="text-gray-400 mb-4 max-w-md">
-              Experience beachfront luxury at its finest. Atican Beach Resort & Hotel offers
-              world-class accommodations, dining, and experiences.
+              Discover an extraordinary beachfront escape featuring premium accommodation, 
+              luxury suites, private events, fine dining, and unforgettable coastal experiences 
+              designed for every occasion.
             </p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -22,7 +23,7 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-[#D4AF37]" />
-                <span>+234 800 000 0000</span>
+                <span>+2349029622583</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#D4AF37]" />

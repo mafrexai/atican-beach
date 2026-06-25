@@ -7,7 +7,7 @@ const faqs = [
     questions: [
       {
         q: 'How do I make a reservation?',
-        a: 'You can book directly through our website by visiting the Rooms page, selecting your preferred room, and completing the checkout process. You can also call us at +234 800 000 0000 or email bookings@aticanbeach.com.',
+        a: 'You can book directly through our website by visiting the Rooms page, selecting your preferred room, and completing the checkout process. You can also call us at +2349029622583 or email bookings@aticanbeachresort.com. aticanbeachresort716@gmail.com',
       },
       {
         q: 'What is your cancellation policy?',
@@ -45,15 +45,15 @@ const faqs = [
     questions: [
       {
         q: 'What amenities are included in the rooms?',
-        a: 'All rooms include AC, TV, and WiFi. Higher-tier rooms include additional amenities such as Mini Bar, Ocean View, Lounge access, Jacuzzi, and Butler service. Check individual room listings for specific amenities.',
+        a: 'All rooms include AC, TV, and WiFi. Higher-tier rooms include additional amenities such as Mini Bar, Ocean View, Lounge access, and Butler service. Check individual room listings for specific amenities.',
       },
-      {
-        q: 'Is room service available?',
-        a: 'Yes, 24-hour room service is available. You can order through our Room Service page or by dialing extension 0 from your room phone.',
-      },
+      // {
+      //   q: 'Is room service available?',
+      //   a: 'Yes, 24-hour room service is available. You can order through our Room Service page or by dialing extension 0 from your room phone.',
+      // },
       {
         q: 'Is there a swimming pool?',
-        a: 'Yes, we have a stunning infinity pool overlooking the beach, available to all guests. The Presidential Suite also includes a private pool.',
+        a: 'Yes, we have a stunning infinity pool overlooking the beach, available to all guests.',
       },
     ],
   },

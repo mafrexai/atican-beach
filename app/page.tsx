@@ -20,15 +20,15 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-[url('/hero-beach.jpg')] bg-cover bg-center" />
         <div className="relative z-20 text-center text-white px-4 max-w-4xl mx-auto animate-fade-in">
           <div className="flex items-center justify-center gap-2 mb-4">
-            {[...Array(7)].map((_, i) => (
+            {[...Array(0)].map((_, i) => (
               <Star key={i} className="w-5 h-5 fill-[#D4AF37] text-[#D4AF37]" />
             ))}
           </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-6" style={{ fontFamily: 'var(--font-playfair)' }}>
-            Atican Beach Resort
+            Atican Beach Resort & Hotel.
           </h1>
           <p className="text-xl md:text-2xl text-blue-100 mb-8">
-            Where the ocean meets luxury. Experience 7-star beachfront hospitality.
+          Ocean Views Timeless Memories. Experience exceptional hospitality by the beach
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/rooms" className="bg-[#0A3D62] text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#08324f] transition-colors inline-flex items-center gap-2">

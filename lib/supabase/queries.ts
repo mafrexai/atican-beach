@@ -59,7 +59,7 @@ export async function getFeaturedRooms(limit = 5): Promise<Room[]> {
     console.error('Error fetching featured rooms:', error)
     return []
   }
-  return data as Room[]
+  return (data ?? []) as unknown as Room[]
 }
 
 // ========== TENTS ==========

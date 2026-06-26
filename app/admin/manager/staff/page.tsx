@@ -61,7 +61,7 @@ export default async function ManagerStaffPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={\px-2.5 py-0.5 rounded-full text-xs font-medium \\}>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${staff.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
                       {staff.is_active !== false ? 'Active' : 'Inactive'}
                     </span>
                     <span className="px-2.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium capitalize">

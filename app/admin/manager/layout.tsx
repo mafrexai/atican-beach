@@ -100,7 +100,7 @@ export default function ManagerLayout({
       </button>
 
       <aside
-        className={ixed inset-y-0 left-0 z-30 w-64 bg-[#082032] text-white transform transition-transform duration-300 ease-in-out lg:translate-x-0 }
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-[#082032] text-white transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
           <div className="p-4 border-b border-[#0A3D62]">
@@ -129,7 +129,7 @@ export default function ManagerLayout({
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={lex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors }
+                  className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors ${isActive ? 'bg-[#0A3D62] text-white' : 'text-gray-300 hover:bg-[#0A3D62]/50 hover:text-white'}`}
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="text-sm font-medium">{item.name}</span>

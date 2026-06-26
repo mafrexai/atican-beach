@@ -41,7 +41,7 @@ export default function StaffLayout({
         const { data: { session } } = await supabase.auth.getSession()
 
         if (!session) {
-          router.push('/admin/login')
+          router.push('/staff/login')
           return
         }
 
@@ -58,22 +58,22 @@ export default function StaffLayout({
           return
         }
 
-        // Not authorized
-        await supabase.auth.signOut()
-        router.push('/admin/login')
-      } catch (error) {
-        console.error('Staff layout auth error:', error)
-        router.push('/admin/login')
-      }
+         // Not authorized
+         await supabase.auth.signOut()
+         router.push('/staff/login')
+       } catch (error) {
+         console.error('Staff layout auth error:', error)
+         router.push('/staff/login')
+       }
     }
 
     checkAuth()
   }, [router, supabase])
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/admin/login')
-  }
+   const handleLogout = async () => {
+     await supabase.auth.signOut()
+     router.push('/staff/login')
+   }
 
   if (loading) {
     return (

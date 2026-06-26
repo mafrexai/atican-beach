@@ -44,6 +44,7 @@ export default function AdminLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userEmail, setUserEmail] = useState('')
+  const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
@@ -75,8 +76,9 @@ export default function AdminLayout({
           .eq('user_id', session.user.id)
           .single()
 
-        if (userRole?.role === 'admin') {
+        if (userRole?.role === 'admin' || userRole?.role === 'manager') {
           setUserEmail(session.user.email || '')
+          setUserRole(userRole.role)
           setLoading(false)
           return
         }
@@ -88,13 +90,14 @@ export default function AdminLayout({
           .eq('id', session.user.id)
           .single()
 
-        if (profile?.role === 'admin') {
+        if (profile?.role === 'admin' || profile?.role === 'manager') {
           setUserEmail(session.user.email || '')
+          setUserRole(profile.role)
           setLoading(false)
           return
         }
 
-        // Not admin
+        // Not admin or manager
         await supabase.auth.signOut()
         router.push('/admin/login')
       } catch (error) {
@@ -219,7 +222,7 @@ export default function AdminLayout({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{userEmail}</p>
-                <p className="text-xs text-gray-400">Administrator</p>
+                <p className="text-xs text-gray-400">{userRole === 'manager' ? 'Manager' : 'Administrator'}</p>
               </div>
             </div>
             <button

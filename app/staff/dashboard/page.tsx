@@ -9,9 +9,9 @@ export default async function StaffDashboardPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/admin/login')
-  }
+   if (!user) {
+     redirect('/staff/login')
+   }
 
   const admin = createAdminClient()
 
@@ -22,9 +22,9 @@ export default async function StaffDashboardPage() {
     .eq('user_id', user.id)
     .single()
 
-  if (userRole?.role !== 'admin' && userRole?.role !== 'front_desk') {
-    redirect('/admin/login')
-  }
+   if (userRole?.role !== 'admin' && userRole?.role !== 'front_desk') {
+     redirect('/staff/login')
+   }
 
   const today = format(new Date(), 'yyyy-MM-dd')
 

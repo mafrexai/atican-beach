@@ -85,7 +85,7 @@ export function generateResponse(message: string, context?: ResponseContext): st
 
   // Greeting
   if (keywords.includes('greeting')) {
-    return 'Welcome to Atican Beach Resort! 🌊 I\'m your AI Receptionist. I can help you with room bookings, pricing, availability, experiences, dining, and any other questions about your stay. How can I assist you today?'
+    return 'Welcome to Atican Beach Resort! I am Mafrex, your AI assistant. 🌊 I\'m your AI Receptionist. I can help you with room bookings, pricing, availability, experiences, dining, and any other questions about your stay. How can I assist you today?'
   }
 
   // Thanks

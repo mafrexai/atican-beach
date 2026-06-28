@@ -40,17 +40,21 @@ export function VoiceReceptionist() {
       const voices = window.speechSynthesis.getVoices()
       setAvailableVoices(voices)
 
-      // Prefer female Nigerian or English voice
+      // Prefer female Nigerian voice - check name patterns browsers actually use
       const preferred =
-        voices.find((v) => v.lang === 'en-NG' && v.name.toLowerCase().includes('female')) ||
+        voices.find((v) => v.lang === 'en-NG' && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman'))) ||
         voices.find((v) => v.lang === 'en-NG') ||
-        voices.find((v) => v.lang.startsWith('en') && v.name.toLowerCase().includes('female')) ||
-        voices.find((v) => v.lang === 'en-GB' && v.name.toLowerCase().includes('female')) ||
+        voices.find((v) => v.name.toLowerCase().includes('samantha')) ||
+        voices.find((v) => v.name.toLowerCase().includes('zira')) ||
+        voices.find((v) => v.name.toLowerCase().includes('victoria')) ||
+        voices.find((v) => v.name.toLowerCase().includes('karen')) ||
+        voices.find((v) => v.lang.startsWith('en') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman'))) ||
+        voices.find((v) => v.lang === 'en-GB' && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman'))) ||
         voices.find((v) => v.lang === 'en-GB') ||
         voices.find((v) => v.lang.startsWith('en'))
       if (preferred) {
         setSelectedVoice(preferred.name)
-      }
+    }
     }
 
     loadVoices()
@@ -148,7 +152,7 @@ export function VoiceReceptionist() {
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = 'en-NG'
       utterance.rate = 0.95
-      utterance.pitch = 1.15
+      utterance.pitch = 1.2
       utterance.volume = 1
 
       if (selectedVoice) {

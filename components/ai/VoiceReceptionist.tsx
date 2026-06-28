@@ -139,40 +139,25 @@ export function VoiceReceptionist() {
     }
   }, [isOpen])
 
-  // Enhanced speakText - no isOpen dependency so it always speaks
-  const speakText = useCallback((text: string) => {
+  // Speak using Google TTS or browser fallback with Nigerian voice
+  const speakTextLocally = useCallback((text: string) => {
     if (!voiceEnabled) return
-    if (!synthRef.current) return
-
-    synthRef.current.cancel()
-
-    setTimeout(() => {
-      if (!synthRef.current) return
-
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = 'en-NG'
-      utterance.rate = 0.95
-      utterance.pitch = 1.2
-      utterance.volume = 1
-
-      if (selectedVoice) {
-        const voice = availableVoices.find((v) => v.name === selectedVoice)
-        if (voice) utterance.voice = voice
-      }
-
-      utterance.onstart = () => setIsSpeaking(true)
-      utterance.onend = () => setIsSpeaking(false)
-      utterance.onerror = () => setIsSpeaking(false)
-
-      synthRef.current.speak(utterance)
-    }, 50)
-  }, [voiceEnabled, selectedVoice, availableVoices])
-
-  const stopSpeaking = useCallback(() => {
-    if (synthRef.current) {
-      synthRef.current.cancel()
+    try {
+      ttsSpeakText({
+        text: text,
+        onStart: () => setIsSpeaking(true),
+        onEnd: () => setIsSpeaking(false),
+        onError: () => setIsSpeaking(false),
+      })
+    } catch {
       setIsSpeaking(false)
     }
+  }, [voiceEnabled])
+  const stopSpeaking = useCallback(() => {
+    if (typeof window !== 'undefined' && window.speechynthesis) {
+      window.speechynthesis.cancel()
+    }
+    setIsSpeaking(false)
   }, [])
 
   const handleSendMessage = useCallback(async (text?: string) => {
@@ -191,6 +176,7 @@ export function VoiceReceptionist() {
         body: JSON.stringify({
           message: guestMessage,
           conversationHistory: messages.slice(-10),
+          sessionId,
         }),
       })
 
@@ -201,11 +187,12 @@ export function VoiceReceptionist() {
       addMessage('ai', aiResponse)
       // For speech: strip emojis and bullet chars for smooth TTS
       const cleanForSpeech = aiResponse.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "").replace(/[-]\s*/g, "").replace(/\s{2,}/g, " ").trim()
-      speakText(cleanForSpeech)
+      const speechReady = formatForSpeech(aiResponse)
+      speakTextLocally(speechReady)
     } catch {
       const errorMsg = 'I apologize, but I\'m having technical difficulties. Please try again or call our front desk at +234 800 000 0000.'
       addMessage('ai', errorMsg)
-      speakText(errorMsg)
+      speakTextLocally(errorMsg)
     } finally {
       setIsProcessing(false)
     }

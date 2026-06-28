@@ -105,7 +105,7 @@ async function getOpenRouterResponse(
     '9. Introduce yourself as Mafrex when relevant',
   ].join('\n')
 
-  console.log('[Mafrex AI] Sending request to OpenRouter...')
+  console.log('[Mafrex AI] Sending request to OpenRouter with model: openrouter/owl-alpha...')
 
   const response = await fetch(openrouterUrl, {
     method: 'POST',
@@ -116,7 +116,7 @@ async function getOpenRouterResponse(
       'X-Title': 'Mafrex AI Receptionist',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.0-flash-001',
+      model: 'openrouter/owl-alpha',
       messages: [
         {
           role: 'system',

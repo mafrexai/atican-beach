@@ -6,6 +6,8 @@ import {
   Mic, MicOff, Volume2, VolumeX, Send, X,
   Minimize2, Maximize2, MessageCircle,
 } from 'lucide-react'
+import { speakText as ttsSpeakText } from '@/lib/tts'
+import { formatForSpeech } from '@/lib/formatSpeech'
 
 interface Message {
   id: string
@@ -196,7 +198,7 @@ export function VoiceReceptionist() {
     } finally {
       setIsProcessing(false)
     }
-  }, [inputText, isProcessing, messages, addMessage, speakText])
+  }, [inputText, isProcessing, messages, addMessage, speakTextLocally])
 
   const startListening = () => {
     if (recognitionRef.current) {

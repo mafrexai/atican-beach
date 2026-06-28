@@ -387,7 +387,7 @@ export function VoiceReceptionist() {
                       onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                       placeholder={isListening ? 'Listening...' : 'Type or click the mic to speak...'}
                       disabled={isListening}
-                      className="flex-1 border border-gray-200 rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:border-[#0A3D62] focus:ring-1 focus:ring-[#0A3D62]/20 min-w-0 disabled:bg-gray-50"
+                      className="flex-1 border border-gray-200 rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:outline-none focus:border-[#0A3D62] focus:ring-1 focus:ring-[#0A3D62]/20 min-w-0 disabled:bg-gray-50 text-black placeholder-gray-500"
                     />
                     <button
                       onClick={() => handleSendMessage()}

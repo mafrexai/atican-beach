@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
       name: string
       email: string
       password?: string
-      role: 'front_desk' | 'admin'
+      role: 'front_desk' | 'admin' | 'manager'
     }
 
     if (!name || !email || !role) {

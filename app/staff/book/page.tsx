@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { format, addDays } from 'date-fns'
-import { CalendarDays, User, Mail, Phone, BedDouble, Tent, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react'
+import { format, addDays, differenceInDays } from 'date-fns'
+import { CalendarDays, User, Mail, Phone, BedDouble, Tent, Sparkles, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 
 interface Room {
   id: string
@@ -66,6 +66,13 @@ export default function StaffBookPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
+  // Payment state
+  const [paymentStatus, setPaymentStatus] = useState<'unpaid' | 'processing' | 'paid'>('unpaid');
+  const [paymentReference, setPaymentReference] = useState('');
+
+  // Calculate number of nights for room pricing
+  const numberOfNights = Math.max(1, differenceInDays(new Date(checkOutDate), new Date(checkInDate)))
+
   // Fetch available items
   useEffect(() => {
     async function fetchItems() {
@@ -88,6 +95,56 @@ export default function StaffBookPage() {
     }
 
     fetchItems()
+  }, [supabase])
+
+  // Handle Paystack payment callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const paymentStatus = urlParams.get('payment')
+    const ref = urlParams.get('ref')
+
+    if (paymentStatus === 'success' && ref) {
+      const verifyPayment = async () => {
+        setLoading(true)
+        try {
+          // Verify the payment with Paystack
+          const response = await fetch('/api/paystack/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reference: ref }),
+          })
+          const data = await response.json()
+
+          if (data.success) {
+            // Update booking payment status
+            const { error: updateError } = await supabase
+              .from('bookings')
+              .update({
+                payment_status: 'paid',
+                status: 'confirmed',
+                payment_reference: ref,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('booking_reference', ref)
+
+            if (updateError) throw updateError
+
+            setSuccess(`Payment confirmed! Booking ${ref} has been paid.`)
+            setPaymentStatus('paid')
+          } else {
+            throw new Error('Payment verification failed')
+          }
+        } catch (err: any) {
+          console.error('Payment verification error:', err)
+          setError('Payment verification failed. Please contact support.')
+        } finally {
+          setLoading(false)
+          // Clean URL params
+          window.history.replaceState({}, document.title, window.location.pathname)
+        }
+      }
+      verifyPayment()
+    }
   }, [supabase])
 
   const addItem = (itemType: ItemType, item: Room | Tent | Experience) => {
@@ -126,7 +183,13 @@ export default function StaffBookPage() {
     ))
   }
 
-  const totalAmount = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const totalAmount = selectedItems.reduce((sum, item) => {
+    // Rooms are priced per night, tents and experiences are one-time
+    const itemTotal = item.itemType === 'room'
+      ? item.price * numberOfNights * item.quantity
+      : item.price * item.quantity
+    return sum + itemTotal
+  }, 0)
 
   const generateReference = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -135,6 +198,184 @@ export default function StaffBookPage() {
       result += chars.charAt(Math.floor(Math.random() * chars.length))
     }
     return result
+  }
+
+  
+  // Initialize Paystack payment
+  const handlePayment = async () => {
+    if (!guestEmail) {
+      setError('Guest email is required for payment');
+      return;
+    }
+    if (totalAmount === 0) {
+      setError('Please select at least one item');
+      return;
+    }
+    setPaymentStatus('processing');
+    setError('');
+    try {
+      // Generate reference first so we can create the booking with it
+      const bookingReference = generateReference();
+      
+      // Create booking with pending status first
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Not authenticated');
+        setPaymentStatus('unpaid');
+        return;
+      }
+
+      const confirmationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .insert({
+          booking_reference: bookingReference,
+          confirmation_code: confirmationCode,
+          user_id: session.user.id,
+          guest_name: guestName,
+          guest_email: guestEmail,
+          guest_phone: guestPhone || null,
+          total_amount: totalAmount,
+          status: 'pending',
+          payment_status: 'unpaid',
+          check_in_date: checkInDate,
+          check_out_date: checkOutDate,
+          special_requests: specialRequests || null,
+          created_by: session.user.id,
+          booking_type: 'walk_in',
+        })
+        .select()
+        .single();
+
+      if (bookingError) throw bookingError;
+
+      // Create booking items
+      const bookingItems = selectedItems.map((item) => ({
+        booking_id: booking.id,
+        item_type: item.itemType,
+        item_id: item.itemId,
+        quantity: item.quantity,
+        price_at_booking: item.price,
+        start_date: checkInDate,
+        end_date: checkOutDate,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('booking_items')
+        .insert(bookingItems);
+
+      if (itemsError) throw itemsError;
+
+      // Log activity
+      await supabase
+        .from('booking_activity_log')
+        .insert({
+          booking_id: booking.id,
+          user_id: session.user.id,
+          action: 'walk_in_booking_created',
+          details: { total_amount: totalAmount, items: selectedItems.length },
+        });
+
+      // Initialize Paystack payment
+      const response = await fetch('/api/paystack/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: guestEmail,
+          amount: totalAmount,
+          bookingReference: bookingReference,
+          callbackUrl: `${window.location.origin}/staff/book?payment=success&ref=${bookingReference}`,
+          metadata: { 
+            booking_id: booking.id,
+            guest_name: guestName, 
+            check_in: checkInDate, 
+            check_out: checkOutDate 
+          },
+        }),
+      });
+      const data = await response.json();
+      if (data.success && data.data?.authorization_url) {
+        // Store booking info for redirect handling
+        sessionStorage.setItem('pendingBookingRef', bookingReference);
+        window.location.href = data.data.authorization_url;
+      } else {
+        throw new Error(data.error || 'Failed to initialize payment');
+      }
+    } catch (err: any) {
+      console.error('Payment error:', err);
+      setError(err.message || 'Payment failed. Please try again.');
+      setPaymentStatus('unpaid');
+    }
+  };
+
+  const markAsPaid = async () => {
+    if (!paymentReference) { setError('Please enter the payment reference'); return; }
+    setLoading(true);
+    try {
+      await createBooking('paid');
+      setPaymentStatus('paid');
+    } catch (err: any) {
+      console.error('Error marking as paid:', err);
+      setError(err.message || 'Failed to update payment status');
+    } finally { setLoading(false); }
+  };
+
+  const createBooking = async (paymentStatusValue: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { throw new Error('Not authenticated'); }
+    const bookingReference = generateReference();
+    const confirmationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const { data: booking, error: bookingError } = await supabase.from('bookings').insert({
+      booking_reference: bookingReference,
+      confirmation_code: confirmationCode,
+      user_id: session.user.id,
+      guest_name: guestName,
+      guest_email: guestEmail,
+      guest_phone: guestPhone || null,
+      total_amount: totalAmount,
+      status: 'confirmed',
+      payment_status: paymentStatusValue,
+      payment_reference: paymentReference || null,
+      check_in_date: checkInDate,
+      check_out_date: checkOutDate,
+      special_requests: specialRequests || null,
+      created_by: session.user.id,
+      booking_type: 'walk_in',
+    }).select().single();
+    if (bookingError) throw bookingError;
+    const bookingItems = selectedItems.map((item) => ({
+      booking_id: booking.id,
+      item_type: item.itemType,
+      item_id: item.itemId,
+      quantity: item.quantity,
+      price_at_booking: item.price,
+      start_date: checkInDate,
+      end_date: checkOutDate,
+    }));
+    const { error: itemsError } = await supabase.from('booking_items').insert(bookingItems);
+    if (itemsError) throw itemsError;
+    await supabase.from('booking_activity_log').insert({
+      booking_id: booking.id,
+      user_id: session.user.id,
+      action: 'walk_in_booking_created',
+      details: { total_amount: totalAmount, items: selectedItems.length, payment_status: paymentStatusValue },
+    });
+    setSuccess(`Booking created successfully! Reference: ${bookingReference}`);
+    setGuestName(''); setGuestEmail(''); setGuestPhone(''); setSpecialRequests('');
+    setSelectedItems([]); setPaymentStatus('unpaid'); setPaymentReference('');
+  };
+
+  const handleCreateBookingOnly = async () => {
+    setLoading(true)
+    try {
+      await createBooking('unpaid')
+    } catch (err: any) {
+      console.error('Error creating booking:', err)
+      setError(err.message || 'Failed to create booking')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,84 +393,8 @@ export default function StaffBookPage() {
       return
     }
 
-    setLoading(true)
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        setError('Not authenticated')
-        setLoading(false)
-        return
-      }
-
-      const bookingReference = generateReference()
-      const confirmationCode = Math.random().toString(36).substring(2, 8).toUpperCase()
-
-      // Create booking
-      const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          booking_reference: bookingReference,
-          confirmation_code: confirmationCode,
-          user_id: session.user.id,
-          guest_name: guestName,
-          guest_email: guestEmail,
-          guest_phone: guestPhone || null,
-          total_amount: totalAmount,
-          status: 'confirmed',
-          payment_status: 'unpaid',
-          check_in_date: checkInDate,
-          check_out_date: checkOutDate,
-          special_requests: specialRequests || null,
-          created_by: session.user.id,
-          booking_type: 'walk_in',
-        })
-        .select()
-        .single()
-
-      if (bookingError) throw bookingError
-
-      // Create booking items
-      const bookingItems = selectedItems.map((item) => ({
-        booking_id: booking.id,
-        item_type: item.itemType,
-        item_id: item.itemId,
-        quantity: item.quantity,
-        price_at_booking: item.price,
-        start_date: checkInDate,
-        end_date: checkOutDate,
-      }))
-
-      const { error: itemsError } = await supabase
-        .from('booking_items')
-        .insert(bookingItems)
-
-      if (itemsError) throw itemsError
-
-      // Log activity
-      await supabase
-        .from('booking_activity_log')
-        .insert({
-          booking_id: booking.id,
-          user_id: session.user.id,
-          action: 'walk_in_booking_created',
-          details: { total_amount: totalAmount, items: selectedItems.length },
-        })
-
-      setSuccess(`Booking created successfully! Reference: ${bookingReference}`)
-
-      // Reset form
-      setGuestName('')
-      setGuestEmail('')
-      setGuestPhone('')
-      setSpecialRequests('')
-      setSelectedItems([])
-    } catch (err: any) {
-      console.error('Error creating booking:', err)
-      setError(err.message || 'Failed to create booking')
-    } finally {
-      setLoading(false)
-    }
+    // Always trigger payment on form submit (Continue to Payment)
+    await handlePayment()
   }
 
   return (
@@ -267,7 +432,7 @@ export default function StaffBookPage() {
                 type="text"
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm text-gray-900"
                 placeholder="John Doe"
                 required
               />
@@ -281,7 +446,7 @@ export default function StaffBookPage() {
                 type="email"
                 value={guestEmail}
                 onChange={(e) => setGuestEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm text-gray-900"
                 placeholder="john@example.com"
                 required
               />
@@ -295,7 +460,7 @@ export default function StaffBookPage() {
                 type="tel"
                 value={guestPhone}
                 onChange={(e) => setGuestPhone(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm text-gray-900"
                 placeholder="+234 800 000 0000"
               />
             </div>
@@ -316,7 +481,7 @@ export default function StaffBookPage() {
                 value={checkInDate}
                 onChange={(e) => setCheckInDate(e.target.value)}
                 min={format(new Date(), 'yyyy-MM-dd')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm text-gray-900"
                 required
               />
             </div>
@@ -327,11 +492,14 @@ export default function StaffBookPage() {
                 value={checkOutDate}
                 onChange={(e) => setCheckOutDate(e.target.value)}
                 min={checkInDate}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm text-gray-900"
                 required
               />
             </div>
           </div>
+          {numberOfNights > 1 && (
+            <p className="text-sm text-gray-500 mt-2">Stay duration: {numberOfNights} nights</p>
+          )}
         </div>
 
         {/* Item Selection */}
@@ -382,6 +550,9 @@ export default function StaffBookPage() {
                     <p className="text-sm font-medium text-gray-900">{room.room_type}</p>
                     <p className="text-xs text-gray-500">Room {room.room_number}</p>
                     <p className="text-sm font-semibold text-[#0A3D62] mt-1">₦{room.price_per_night.toLocaleString()}/night</p>
+                    {numberOfNights > 1 && (
+                      <p className="text-xs text-gray-500">{numberOfNights} nights = ₦{(room.price_per_night * numberOfNights).toLocaleString()}</p>
+                    )}
                   </button>
                 )
               })}
@@ -460,7 +631,7 @@ export default function StaffBookPage() {
                         </button>
                       </div>
                     )}
-                    <p className="text-sm font-semibold text-gray-900">₦{(item.price * item.quantity).toLocaleString()}</p>
+                    <p className="text-sm font-semibold text-gray-900">₦{(item.itemType === 'room' ? item.price * numberOfNights * item.quantity : item.price * item.quantity).toLocaleString()}</p>
                     <button
                       type="button"
                       onClick={() => removeItem(item.itemType, item.itemId)}
@@ -474,7 +645,12 @@ export default function StaffBookPage() {
             </div>
             <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
               <p className="text-lg font-semibold text-gray-900">Total</p>
-              <p className="text-xl font-bold text-[#0A3D62]">₦{totalAmount.toLocaleString()}</p>
+              <div className="text-right">
+                <p className="text-xl font-bold text-[#0A3D62]">₦{totalAmount.toLocaleString()}</p>
+                {numberOfNights > 1 && (
+                  <p className="text-xs text-gray-500">({numberOfNights} nights)</p>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -486,20 +662,31 @@ export default function StaffBookPage() {
             value={specialRequests}
             onChange={(e) => setSpecialRequests(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm text-gray-900"
             placeholder="Any special requests or notes..."
           />
         </div>
+
 
         {/* Submit */}
         <div className="flex gap-3">
           <button
             type="submit"
-            disabled={loading || selectedItems.length === 0}
+            disabled={loading || paymentStatus === 'processing' || selectedItems.length === 0}
             className="px-6 py-2.5 bg-[#0A3D62] text-white rounded-lg hover:bg-[#082032] transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating Booking...' : 'Create Walk-in Booking'}
+            {paymentStatus === 'processing' ? 'Processing...' : loading ? 'Creating...' : 'Continue to Payment'}
           </button>
+          {true && (
+            <button
+              type="button"
+              onClick={handleCreateBookingOnly}
+              disabled={loading || paymentStatus === 'processing'}
+              className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Saving...' : 'Create Without Payment'}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => router.push('/staff/dashboard')}

@@ -156,7 +156,7 @@ export default function DiningPage() {
                   <Phone className="w-5 h-5 text-[#F97316]" />
                   <div>
                     <p className="font-medium text-[#082032]">Reservations</p>
-                    <p className="text-gray-600 text-sm">+234 800 000 0000</p>
+                    <p className="text-gray-600 text-sm">+234 902 962 2583</p>
                   </div>
                 </div>
               </div>

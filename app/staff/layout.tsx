@@ -14,12 +14,14 @@ import {
   Menu,
   X,
   Waves,
+  ClipboardList,
 } from 'lucide-react'
 
 const staffNavItems = [
   { name: 'Dashboard', href: '/staff/dashboard', icon: LayoutDashboard },
   { name: 'Walk-in Booking', href: '/staff/book', icon: CalendarPlus },
   { name: 'Check-in/out', href: '/staff/check-in', icon: LogIn },
+  { name: 'Activity Log', href: '/staff/activity-log', icon: ClipboardList },
 ]
 
 export default function StaffLayout({

@@ -26,6 +26,7 @@ export function VoiceReceptionist() {
   const [voiceEnabled, setVoiceEnabled] = useState(true)
   const [selectedVoice, setSelectedVoice] = useState<string>('')
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [sessionId] = useState(() => "session_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6))
 
   const recognitionRef = useRef<any>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)

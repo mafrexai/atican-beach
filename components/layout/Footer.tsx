@@ -1,6 +1,6 @@
-import Image from 'next/image'
+﻿import Image from 'next/image'
 import Link from 'next/link'
-import { Phone, Mail, MapPin } from 'lucide-react'
+import { Phone, Mail, MapPin, Zap } from 'lucide-react'
 
 export function Footer() {
   return (
@@ -59,6 +59,15 @@ export function Footer() {
         </div>
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500 text-sm">
           <p>&copy; {new Date().getFullYear()} Atican Beach Resort & Hotel. All rights reserved.</p>
+        </div>
+        <div className="mt-6 flex justify-center">
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#0A3D62]/30 to-[#D4AF37]/20 border border-[#D4AF37]/30">
+            <span className="text-xs text-gray-400">Powered by</span>
+            <span className="text-sm font-bold bg-gradient-to-r from-[#D4AF37] to-[#F4D03F] bg-clip-text text-transparent">
+              mafrexai
+            </span>
+            <Zap className="w-3.5 h-3.5 text-[#D4AF37]" />
+          </div>
         </div>
       </div>
     </footer>

@@ -7,7 +7,7 @@ export default async function ManagerStaffPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/admin/login')
+    redirect('/staff/login')
   }
 
   const admin = createAdminClient()

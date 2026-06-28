@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -10,7 +10,7 @@ export default function AddStaffPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'front_desk' | 'admin'>('front_desk')
+  const [role, setRole] = useState<'front_desk' | 'admin' | 'manager'>('front_desk')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -99,7 +99,7 @@ export default function AddStaffPage() {
               <p className="text-xs text-gray-500 mb-1">Login Credentials:</p>
               <p className="text-sm text-gray-900"><span className="font-medium">Email:</span> {createdCredentials.email}</p>
               <p className="text-sm text-gray-900"><span className="font-medium">Password:</span> {createdCredentials.password}</p>
-              <p className="text-xs text-orange-600 mt-2">⚠️ Copy this password now. It won't be shown again.</p>
+              <p className="text-xs text-orange-600 mt-2">âš ï¸ Copy this password now. It won't be shown again.</p>
             </div>
           )}
         </div>
@@ -180,16 +180,16 @@ export default function AddStaffPage() {
           </label>
           <select
             value={role}
-            onChange={(e) => setRole(e.target.value as 'front_desk' | 'admin')}
+            onChange={(e) => setRole(e.target.value as 'front_desk' | 'admin' | 'manager')}
             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm"
           >
             <option value="front_desk">Front Desk</option>
-            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>\n            <option value="admin">Admin</option>
           </select>
           <p className="text-xs text-gray-500 mt-1">
             {role === 'front_desk'
               ? 'Can manage bookings, check-ins, and walk-in guests'
-              : 'Full access to all admin features'}
+              : role === 'manager' ? 'Access to manager dashboard and operations' : 'Full access to all admin features'}
           </p>
         </div>
 

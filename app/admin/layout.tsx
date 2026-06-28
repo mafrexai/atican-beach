@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
@@ -76,7 +76,7 @@ export default function AdminLayout({
           .eq('user_id', session.user.id)
           .single()
 
-        if (userRole?.role === 'admin' || userRole?.role === 'manager') {
+        if (userRole?.role === 'admin') {
           setUserEmail(session.user.email || '')
           setUserRole(userRole.role)
           setLoading(false)
@@ -90,14 +90,14 @@ export default function AdminLayout({
           .eq('id', session.user.id)
           .single()
 
-        if (profile?.role === 'admin' || profile?.role === 'manager') {
+        if (profile?.role === 'admin') {
           setUserEmail(session.user.email || '')
           setUserRole(profile.role)
           setLoading(false)
           return
         }
 
-        // Not admin or manager
+        // Not admin
         await supabase.auth.signOut()
         router.push('/admin/login')
       } catch (error) {

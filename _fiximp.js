@@ -1,1 +1,0 @@
-﻿var fs=require("fs");var c=fs.readFileSync("components/ai/VoiceReceptionist.tsx","utf8");c=c.replace("import { ttsSpeakText } from @/lib/tts","import { ttsSpeakText } from @/lib/tts\nimport { formatForSpeech } from @/lib/formatSpeech");fs.writeFileSync("components/ai/VoiceReceptionist.tsx",c,"utf8");console.log("Done");

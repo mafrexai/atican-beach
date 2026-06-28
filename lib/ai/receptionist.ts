@@ -1,9 +1,8 @@
-﻿// Enhanced AI Receptionist - Gemini-powered with Supabase Knowledge Base
-import { GoogleGenerativeAI } from '@google/generative-ai'
+﻿// Enhanced AI Receptionist - OpenRouter API with Supabase Knowledge Base
 import { generateResponse as fallbackResponse, getWelcomeMessage } from './responses'
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
-const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || ''
+const openrouterUrl = 'https://openrouter.ai/api/v1/chat/completions'
 
 interface KnowledgeEntry {
   id: string
@@ -18,20 +17,17 @@ export async function getReceptionistResponse(
   context: { page?: string; conversationHistory?: Array<{ type: string; text: string }> },
   supabaseClient: any
 ): Promise<string> {
-  // 1. Try Gemini-powered response first
-  if (genAI) {
+  if (OPENROUTER_API_KEY) {
     try {
-      return await getGeminiResponse(message, context, supabaseClient)
+      return await getOpenRouterResponse(message, context, supabaseClient)
     } catch (error) {
-      console.error('Gemini error, falling back to rule-based:', error)
+      console.error('OpenRouter error, falling back to rule-based:', error)
     }
   }
-
-  // 2. Fallback to rule-based system
   return fallbackResponse(message, context)
 }
 
-async function getGeminiResponse(
+async function getOpenRouterResponse(
   message: string,
   context: { page?: string; conversationHistory?: Array<{ type: string; text: string }> },
   supabaseClient: any
@@ -65,8 +61,6 @@ async function getGeminiResponse(
   const history = (context.conversationHistory || []).slice(-6)
   const historyStr = history.map(m => (m.type === 'guest' ? 'Guest' : 'AI') + ': ' + m.text).join('\n')
 
-  const model = genAI!.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
   const promptParts = [
     'You are the AI Receptionist for Atican Beach Resort, a 7-star luxury beachfront resort in Okun-Ajah, Lagos, Nigeria.',
     '',
@@ -75,6 +69,7 @@ async function getGeminiResponse(
     '- Knowledgeable about every aspect of the resort',
     '- Helpful and solution-oriented',
     '- Use Nigerian Naira (N) for prices',
+    '- IMPORTANT: Respond in plain text. Do NOT use markdown formatting (no **, no *, no #, no bullet dashes). Use plain sentences.',
     '',
     '## KNOWLEDGE BASE (Official Resort Information)',
     knowledgeContext || 'Using general resort knowledge.',
@@ -92,7 +87,7 @@ async function getGeminiResponse(
     message,
     '',
     '## INSTRUCTIONS',
-    '1. Respond naturally and conversationally',
+    '1. Respond naturally and conversationally in plain text (no markdown)',
     '2. Use the knowledge base for accurate information - do NOT make up prices or details',
     '3. If you dont know something, say so honestly and offer to connect them to the front desk',
     '4. Offer to help with bookings when appropriate',
@@ -104,14 +99,32 @@ async function getGeminiResponse(
     '## RESPONSE',
   ]
 
-  const result = await model.generateContent(promptParts.join('\n'))
-  return result.response.text()
+  const response = await fetch(openrouterUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aticanbeach.com',
+      'X-Title': 'Atican Beach AI Receptionist',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.0-flash-001',
+      messages: [
+        { role: 'system', content: 'You are the AI Receptionist for Atican Beach Resort. Respond in plain text without markdown. Be warm, professional, Nigerian-friendly.' },
+        { role: 'user', content: promptParts.join('\n') },
+      ],
+      temperature: 0.7,
+      max_tokens: 500,
+    }),
+  })
+  if (!response.ok) throw new Error('OpenRouter API error: ' + response.status)
+  const data = await response.json()
+  return data.choices?.[0]?.message?.content || 'I apologize, I could not generate a response.'
 }
 
 function findMatchingEntries(message: string, knowledgeBase: KnowledgeEntry[]): KnowledgeEntry[] {
   const normalized = message.toLowerCase()
   const matches: Array<{ entry: KnowledgeEntry; score: number }> = []
-
   for (const entry of knowledgeBase) {
     let score = 0
     for (const keyword of entry.keywords) {
@@ -123,52 +136,33 @@ function findMatchingEntries(message: string, knowledgeBase: KnowledgeEntry[]): 
     }
     if (score > 0) matches.push({ entry, score })
   }
-
   return matches.sort((a, b) => b.score - a.score).slice(0, 5).map(m => m.entry)
 }
 
 export async function saveConversation(
-  sessionId: string,
-  role: 'guest' | 'assistant',
-  message: string,
-  userId?: string,
-  supabaseClient?: any
+  sessionId: string, role: 'guest' | 'assistant', message: string, userId?: string, supabaseClient?: any
 ): Promise<void> {
   if (!supabaseClient || !sessionId) return
   try {
-    await supabaseClient.from('ai_conversations').insert({
-      user_id: userId || null,
-      session_id: sessionId,
-      role,
-      message,
-    })
-  } catch (error) {
-    console.error('Error saving AI conversation:', error)
-  }
+    await supabaseClient.from('ai_conversations').insert({ user_id: userId || null, session_id: sessionId, role, message })
+  } catch (error) { console.error('Error saving AI conversation:', error) }
 }
 
 export function detectBookingIntent(message: string): boolean {
   const bookingKeywords = ['book','reserve','reservation','stay','check in','check-in','available','vacancy','nights','room for','i want','i need','looking for','can i get']
-  const normalized = message.toLowerCase()
-  return bookingKeywords.some(keyword => normalized.includes(keyword))
+  return bookingKeywords.some(keyword => message.toLowerCase().includes(keyword))
 }
 
-export function extractBookingDetails(message: string): {
-  roomType?: string; checkIn?: string; checkOut?: string; guests?: number
-} {
+export function extractBookingDetails(message: string): { roomType?: string; checkIn?: string; checkOut?: string; guests?: number } {
   const details: { roomType?: string; checkIn?: string; checkOut?: string; guests?: number } = {}
   const lowerMsg = message.toLowerCase()
   const roomTypeMap: Record<string, string> = {
-    'standard': 'Standard', 'deluxe': 'Deluxe', 'double bed': 'Double Bed',
-    'family': 'Family', 'executive suite': 'Executive Suite',
-    'premium suite': 'Premium Suite', 'presidential suite': 'Presidential Suite',
-    'executive': 'Executive', 'premium': 'Premium Suite', 'presidential': 'Presidential Suite',
-    'suite': 'Premium Suite',
+    'standard': 'Standard', 'deluxe': 'Deluxe', 'double bed': 'Double Bed', 'family': 'Family',
+    'executive suite': 'Executive Suite', 'premium suite': 'Premium Suite', 'presidential suite': 'Presidential Suite',
+    'executive': 'Executive', 'premium': 'Premium Suite', 'presidential': 'Presidential Suite', 'suite': 'Premium Suite',
   }
   const sortedTypes = Object.keys(roomTypeMap).sort((a, b) => b.length - a.length)
-  for (const type of sortedTypes) {
-    if (lowerMsg.includes(type)) { details.roomType = roomTypeMap[type]; break }
-  }
+  for (const type of sortedTypes) { if (lowerMsg.includes(type)) { details.roomType = roomTypeMap[type]; break } }
   const dateRegex = /(?:(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})|(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*(\d{2,4})?)/gi
   const dateMatches = [...message.matchAll(dateRegex)]
   if (dateMatches.length >= 1) details.checkIn = dateMatches[0][0]

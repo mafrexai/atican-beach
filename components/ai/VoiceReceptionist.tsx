@@ -40,9 +40,12 @@ export function VoiceReceptionist() {
       const voices = window.speechSynthesis.getVoices()
       setAvailableVoices(voices)
 
-      // Prefer Nigerian or English voice
+      // Prefer female Nigerian or English voice
       const preferred =
+        voices.find((v) => v.lang === 'en-NG' && v.name.toLowerCase().includes('female')) ||
         voices.find((v) => v.lang === 'en-NG') ||
+        voices.find((v) => v.lang.startsWith('en') && v.name.toLowerCase().includes('female')) ||
+        voices.find((v) => v.lang === 'en-GB' && v.name.toLowerCase().includes('female')) ||
         voices.find((v) => v.lang === 'en-GB') ||
         voices.find((v) => v.lang.startsWith('en'))
       if (preferred) {
@@ -145,7 +148,7 @@ export function VoiceReceptionist() {
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = 'en-NG'
       utterance.rate = 0.95
-      utterance.pitch = 1.1
+      utterance.pitch = 1.15
       utterance.volume = 1
 
       if (selectedVoice) {
@@ -188,9 +191,13 @@ export function VoiceReceptionist() {
       })
 
       const data = await response.json()
-      const aiResponse = data.reply || 'I apologize, but I\'m having trouble responding. Please try again.'
+      let aiResponse = data.reply || 'I apologize, but I am having trouble responding. Please try again.'
+      // Strip markdown asterisks for clean display
+      aiResponse = aiResponse.replace(/\*\*/g, "").replace(/\*/g, "").replace(/^#{1,6}\s/gm, "").replace(/\s{2,}/g, " ").trim()
       addMessage('ai', aiResponse)
-      speakText(aiResponse)
+      // For speech: strip emojis and bullet chars for smooth TTS
+      const cleanForSpeech = aiResponse.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "").replace(/[-]\s*/g, "").replace(/\s{2,}/g, " ").trim()
+      speakText(cleanForSpeech)
     } catch {
       const errorMsg = 'I apologize, but I\'m having technical difficulties. Please try again or call our front desk at +234 800 000 0000.'
       addMessage('ai', errorMsg)

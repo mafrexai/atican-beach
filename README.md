@@ -34,7 +34,7 @@ Atican Beach Resort is a full-stack hospitality management platform that handles
 - **Booking Confirmation**: Success page with booking reference, QR code generation, and booking details summary
 
 ### AI-Powered Features
-- **AI Receptionist**: Gemini 2.0 Flash-powered chatbot with voice input/output (Web Speech API), Supabase knowledge base, booking intent detection, conversation history tracking, and context-aware responses about rooms, pricing, policies, experiences, dining, events, gate fees, and more
+- **AI Receptionist**: OpenRouter (Gemini 2.0 Flash)-powered chatbot with voice input/output (Web Speech API), Supabase knowledge base, booking intent detection, conversation history tracking, and context-aware responses about rooms, pricing, policies, experiences, dining, events, gate fees, and more
 - **AI Concierge**: Smart upselling system with context-aware offers (suite upgrades, experience bundles, dining specials, sunset dinner packages) triggered by user behavior (page visits, cart contents, time on site)
 - **Knowledge Base**: Admin-managed AI knowledge entries with categories, keywords, and search scoring for accurate responses
 - **Booking Intent Detection**: Natural language processing to detect and guide booking requests from conversation
@@ -101,8 +101,10 @@ Atican Beach Resort is a full-stack hospitality management platform that handles
 - **API**: Next.js API Routes (App Router pattern) with Zod validation
 
 ### AI
-- **Model**: Google Gemini 2.0 Flash
+- **Model**: Google OpenRouter (Gemini 2.0 Flash)
 - **Knowledge Base**: Supabase-hosted with keyword scoring
+- **Markdown Stripping**: AI responses cleaned of `**`, `*`, `#` before display and TTS for smooth voice output
+- **Voice**: Female Nigerian English voice preference with emoji/bullet stripping
 - **Voice**: Web Speech API (SpeechRecognition + SpeechSynthesis)
 - **Fallback**: Rule-based response system when Gemini unavailable
 
@@ -257,7 +259,7 @@ npm run dev
 | PAYSTACK_SECRET_KEY | Paystack secret key | Yes |
 | NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY | Paystack public key | Yes |
 | RESEND_API_KEY | Resend API key | Yes |
-| GEMINI_API_KEY | Google Gemini AI API key | Yes |
+| OPENROUTER_API_KEY | OpenRouter API key | Yes |
 | NEXT_PUBLIC_APP_URL | App public URL | No |
 
 ## Database Schema

@@ -2,7 +2,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
-const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null
+const openrouterUrl = "https://openrouter.ai/api/v1/chat/completions"
 
 export interface ConciergeRecommendation {
   type: 'upgrade' | 'experience' | 'dining' | 'event' | 'bundle'
@@ -84,7 +84,7 @@ export async function getConciergeRecommendations(
   }
 
   // 3. Gemini-powered personalized recommendations
-  if (genAI && supabaseClient && context.userBookings !== undefined) {
+  if (OPENROUTER_API_KEY && supabaseClient && context.userBookings !== undefined) {
     try {
       const geminiRecs = await getGeminiRecommendations(context, supabaseClient)
       recommendations.push(...geminiRecs)

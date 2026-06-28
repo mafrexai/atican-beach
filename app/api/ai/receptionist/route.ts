@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      reply,
+      // Strip markdown formatting for clean AI voice
+      reply: reply.replace(/\*\*/g, "").replace(/\*/g, "").replace(/^#{1,6}\s/gm, ""),
       isBooking,
       bookingDetails,
       timestamp: new Date().toISOString(),

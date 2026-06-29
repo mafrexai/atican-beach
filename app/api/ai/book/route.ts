@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       .select('*')
       .eq('room_type', roomType)
       .eq('is_active', true)
+      .eq('status', 'available')
       .limit(1)
 
     if (roomsError || !rooms || rooms.length === 0) {
@@ -110,6 +111,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Update room status to booked
+    await supabase.from('rooms').update({ status: 'booked' }).eq('id', room.id);
 
     // Create booking item
     await supabase.from('booking_items').insert({

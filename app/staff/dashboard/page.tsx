@@ -15,8 +15,8 @@ export default async function StaffDashboardPage() {
 
   const today = format(new Date(), "yyyy-MM-dd")
   const { data: allRooms } = await admin.from("rooms").select("*").eq("is_active", true).order("room_number")
-  const availableRooms = allRooms?.filter((r) => r.status === "available") || []
-  const bookedRooms = allRooms?.filter((r) => r.status === "booked") || []
+  const availableRooms = allRooms?.filter((r: any) => r.status === "available") || []
+  const bookedRooms = allRooms?.filter((r: any) => r.status === "booked") || []
   const { data: arrivals } = await admin.from("bookings").select("*").eq("check_in_date", today).in("status", ["confirmed", "pending"]).is("checked_in_at", null)
   const { data: checkedIn } = await admin.from("bookings").select("*").not("checked_in_at", "is", null).is("checked_out_at", null)
   const { data: activeBookings } = await admin.from("bookings").select("*, booking_items(*)").in("status", ["confirmed", "pending"]).order("check_in_date", { ascending: true })

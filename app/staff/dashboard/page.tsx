@@ -35,7 +35,7 @@ export default async function StaffDashboardPage() {
         <p className="text-gray-500 text-sm mt-1">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {stats.map((stat) => (
+        {stats.map((stat: any) => (
           <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -79,8 +79,8 @@ export default async function StaffDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {allRooms?.map((room) => {
-                const booking = activeBookings?.find((b) => b.booking_items?.some((i) => i.item_type === "room" && i.item_id === room.id))
+              {allRooms?.map((room: any) => {
+                const booking = activeBookings?.find((b: any) => b.booking_items?.some((i: any) => i.item_type === "room" && i.item_id === room.id))
                 return (
                   <tr key={room.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => { window.location.href = `/staff/rooms/${room.id}` }}>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{room.room_number}</td>

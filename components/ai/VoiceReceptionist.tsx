@@ -217,7 +217,7 @@ export function VoiceReceptionist() {
     const checkIn = parseDate(ciMatch && ciMatch[1]) || new Date().toISOString().split("T")[0]
     const checkOut = parseDate(coMatch && coMatch[1]) || new Date(Date.now()+86400000).toISOString().split("T")[0]
     try {
-      const resp = await fetch("/api/ai/book", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ guestName:nameMatch[1]?.trim(), guestEmail:emailMatch[1]?.trim(), guestPhone:phoneMatch?phoneMatch?.[1]?.trim():undefined, roomType:roomMatch[1].split(" ").map((w)=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" "), checkIn, checkOut, guests:guestsMatch?parseInt(guestsMatch[1]):2 }) })
+      const resp = await fetch("/api/ai/book", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ guestName:nameMatch[1]?.trim(), guestEmail:emailMatch[1]?.trim(), guestPhone:phoneMatch?phoneMatch?.[1]?.trim():undefined, roomType:roomMatch[1]?.split(" ").map((w)=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" "), checkIn, checkOut, guests:guestsMatch?parseInt(guestsMatch[1]):2 }) })
       const result = await resp.json()
       if (result.success) addMessage("ai", " Booking " + result.booking.reference + " confirmed. Email sent to " + result.booking.guestEmail + ".")
     } catch(e) { console.error("[Mafrex AI] Booking error:", e) }

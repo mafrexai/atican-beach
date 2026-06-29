@@ -1,8 +1,7 @@
-﻿// Enhanced AI Concierge - Personalized recommendations and upselling
-import { GoogleGenerativeAI } from '@google/generative-ai'
+﻿// Enhanced AI Concierge - OpenRouter-powered personalized recommendations
+import { formatForSpeech } from './formatSpeech'
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
-const openrouterUrl = "https://openrouter.ai/api/v1/chat/completions"
+const openrouterUrl = 'https://openrouter.ai/api/v1/chat/completions'
 
 export interface ConciergeRecommendation {
   type: 'upgrade' | 'experience' | 'dining' | 'event' | 'bundle'
@@ -24,6 +23,7 @@ export async function getConciergeRecommendations(
   },
   supabaseClient?: any
 ): Promise<ConciergeRecommendation[]> {
+  const apiKey = process.env.OPENROUTER_API_KEY || ''
   const recommendations: ConciergeRecommendation[] = []
 
   // 1. Room upgrade suggestions based on cart
@@ -83,13 +83,13 @@ export async function getConciergeRecommendations(
     })
   }
 
-  // 3. Gemini-powered personalized recommendations
-  if (OPENROUTER_API_KEY && supabaseClient && context.userBookings !== undefined) {
+  // 3. OpenRouter-powered personalized recommendations
+  if (apiKey && supabaseClient && context.userBookings !== undefined) {
     try {
-      const geminiRecs = await getGeminiRecommendations(context, supabaseClient)
+      const geminiRecs = await getOpenRouterRecommendations(context, supabaseClient, apiKey)
       recommendations.push(...geminiRecs)
     } catch (error) {
-      console.error('Gemini concierge error:', error)
+      console.error('[Concierge AI] OpenRouter error:', error)
     }
   }
 
@@ -97,30 +97,47 @@ export async function getConciergeRecommendations(
   return recommendations.sort((a, b) => b.priority - a.priority).slice(0, 3)
 }
 
-async function getGeminiRecommendations(
+async function getOpenRouterRecommendations(
   context: any,
-  supabaseClient: any
+  supabaseClient: any,
+  apiKey: string
 ): Promise<ConciergeRecommendation[]> {
-  const model = genAI!.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const model = 'google/gemini-2.0-flash-001'
 
-  const promptParts = [
-    'You are the AI Concierge for Atican Beach Resort in Okun-Ajah, Lagos, Nigeria.',
-    'Based on the guest context below, suggest 1-2 personalized upsell or cross-sell recommendations.',
-    'Context: ' + JSON.stringify(context),
-    '',
-    'Return JSON array only. Each item: {type, title, description, ctaText, ctaLink, priority}.',
-    'Types: upgrade, experience, dining, event, bundle.',
-    'Keep descriptions under 80 words. Use N for Naira. Priority 1-10.',
-  ]
+  const response = await fetch(openrouterUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + apiKey,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aticanbeach.com',
+      'X-Title': 'Atican Beach AI Concierge',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are the AI Concierge for Atican Beach Resort. Return ONLY a raw JSON array, no markdown, no code fences. Each item: {type, title, description, ctaText, ctaLink, priority}. Types: upgrade, experience, dining, event, bundle. Max 80 words per description. Use N for Naira. Priority 1-10.'
+        },
+        {
+          role: 'user',
+          content: 'Guest context: ' + JSON.stringify(context) + '. Suggest 1-2 personalized upsell recommendations.'
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 300,
+    }),
+  })
 
-  const result = await model.generateContent(promptParts.join('\n'))
-  const text = result.response.text()
+  if (!response.ok) return []
+  const data = await response.json()
+  const text = data.choices?.[0]?.message?.content || ''
 
   try {
     const jsonMatch = text.match(/\[[\s\S]*\]/)
     if (jsonMatch) return JSON.parse(jsonMatch[0])
   } catch {
-    // Invalid JSON from Gemini, skip
+    // Invalid JSON from OpenRouter, skip
   }
   return []
 }

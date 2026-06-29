@@ -1,4 +1,4 @@
-import type { Room } from @/types/database
+import type { Room } "@/types/database"
 ﻿// ========== ROOM AVAILABILITY SYSTEM ==========
 
 export async function getAvailableRooms(): Promise<Room[]> {

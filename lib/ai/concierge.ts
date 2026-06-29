@@ -1,5 +1,5 @@
 ﻿// Enhanced AI Concierge - OpenRouter-powered personalized recommendations
-import { formatForSpeech } from './formatSpeech'
+import { formatForSpeech } from '../formatSpeech'
 
 const openrouterUrl = 'https://openrouter.ai/api/v1/chat/completions'
 

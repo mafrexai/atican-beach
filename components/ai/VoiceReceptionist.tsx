@@ -157,7 +157,7 @@ export function VoiceReceptionist() {
   }, [voiceEnabled])
   const stopSpeaking = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechynthesis.cancel()
+      window.speechSynthesis.cancel()
     }
     setIsSpeaking(false)
   }, [])

@@ -188,7 +188,7 @@ export function extractBookingDetails(message: string): { roomType?: string; che
   if (dateMatches.length >= 2) details.checkOut = dateMatches[1]?.[0]
   const guestRegex = /(\d+)\s*guests?|(\d+)\s*people|(\d+)\s*persons?/i
   const guestMatch = message.match(guestRegex)
-  if (guestMatch) details.guests = parseInt(guestMatch[1] || guestMatch[2] || guestMatch[3])
+  if (guestMatch) details.guests = parseInt(guestMatch[1] || guestMatch[2] || guestMatch[3] || "0")
   return details
 }
 

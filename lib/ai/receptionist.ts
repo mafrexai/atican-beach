@@ -184,8 +184,8 @@ export function extractBookingDetails(message: string): { roomType?: string; che
   for (const type of sortedTypes) { if (lowerMsg.includes(type)) { details.roomType = roomTypeMap[type]; break } }
   const dateRegex = /(?:(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})|(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*(\d{2,4})?)/gi
   const dateMatches = [...message.matchAll(dateRegex)]
-  if (dateMatches.length >= 1) details.checkIn = dateMatches[0][0]
-  if (dateMatches.length >= 2) details.checkOut = dateMatches[1][0]
+  if (dateMatches.length >= 1) details.checkIn = dateMatches[0]?.[0]
+  if (dateMatches.length >= 2) details.checkOut = dateMatches[1]?.[0]
   const guestRegex = /(\d+)\s*guests?|(\d+)\s*people|(\d+)\s*persons?/i
   const guestMatch = message.match(guestRegex)
   if (guestMatch) details.guests = parseInt(guestMatch[1] || guestMatch[2] || guestMatch[3])

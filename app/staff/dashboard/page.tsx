@@ -36,7 +36,7 @@ export default async function StaffDashboardPage() {
   const stats = [
     { label: 'Available Rooms', value: availableRooms.length, icon: Check, color: 'bg-green-50 text-green-700', iconColor: 'text-green-500' },
     { label: 'Booked Rooms', value: bookedRooms.length, icon: BedDouble, color: 'bg-red-50 text-red-700', iconColor: 'text-red-500' },
-    { label: \"Today's Arrivals\", value: arrivals?.length || 0, icon: LogIn, color: 'bg-blue-50 text-blue-700', iconColor: 'text-blue-500' },
+    { label: 'Today's Arrivals', value: arrivals?.length || 0, icon: LogIn, color: 'bg-blue-50 text-blue-700', iconColor: 'text-blue-500' },
     { label: 'Currently Checked In', value: checkedIn?.length || 0, icon: CheckCircle2, color: 'bg-emerald-50 text-emerald-700', iconColor: 'text-emerald-500' },
   ]
 

@@ -82,3 +82,4 @@ export async function updateRoomStatus(roomId: string, status: string): Promise<
     .eq('id', roomId)
   return !error
 }
+

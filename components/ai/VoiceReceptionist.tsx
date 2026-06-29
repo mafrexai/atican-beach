@@ -200,6 +200,38 @@ export function VoiceReceptionist() {
     }
   }, [inputText, isProcessing, messages, addMessage, speakTextLocally])
 
+
+  const tryCreateBooking = useCallback(async () => {
+    const allText = messages.map((m) => m.text).join(" ").toLowerCase()
+    if (!allText.includes("secured") && !allText.includes("all set") && !allText.includes("confirmed")) return
+    const nameMatch = allText.match(/(?:name|full name|guest name)[:s]+([a-z]+(?:s+[a-z]+)+)/i)
+    const emailMatch = allText.match(/([w.-]+@[w.-]+w+)/i)
+    const phoneMatch = allText.match(/(?:phone|number|tel)[:s]+([ds+()-]{8,})/i)
+    const roomMatch = allText.match(/(standard|deluxe|double bed|family|executive|premium suite|executive suite|presidential suite)/i)
+    if (!nameMatch || !emailMatch || !roomMatch) return
+    const monthMap = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"}
+    const parseDate = (d) => { if (!d) return null; const m = d.match(/(d{1,2})s+(w+)/i); if (!m) return null; return new Date().getFullYear() + "-" + (monthMap[m[2].toLowerCase().substring(0,3)] || "01") + "-" + m[1].padStart(2,"0") }
+    const ciMatch = allText.match(/(?:check-in|check in|arrival|from)[:s]+([ws]+d{1,2}[s,]+w+)/i)
+    const coMatch = allText.match(/(?:check-out|check out|departure|to)[:s]+([ws]+d{1,2}[s,]+w+)/i)
+    const guestsMatch = allText.match(/(d+)s*(?:guest|person|people|persons)/i)
+    const checkIn = parseDate(ciMatch && ciMatch[1]) || new Date().toISOString().split("T")[0]
+    const checkOut = parseDate(coMatch && coMatch[1]) || new Date(Date.now()+86400000).toISOString().split("T")[0]
+    try {
+      const resp = await fetch("/api/ai/book", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ guestName:nameMatch[1].trim(), guestEmail:emailMatch[1].trim(), guestPhone:phoneMatch?phoneMatch[1].trim():undefined, roomType:roomMatch[1].split(" ").map((w)=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" "), checkIn, checkOut, guests:guestsMatch?parseInt(guestsMatch[1]):2 }) })
+      const result = await resp.json()
+      if (result.success) addMessage("ai", " Booking " + result.booking.reference + " confirmed. Email sent to " + result.booking.guestEmail + ".")
+    } catch(e) { console.error("[Mafrex AI] Booking error:", e) }
+  }, [messages, addMessage])
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const last = messages[messages.length - 1]
+      if (last.type === "ai" && (last.text.includes("secured") || last.text.includes("all set") || last.text.includes("confirmed"))) {
+        tryCreateBooking()
+      }
+    }
+  }, [messages, tryCreateBooking])
+
   const startListening = () => {
     if (recognitionRef.current) {
       try {

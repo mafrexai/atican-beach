@@ -226,7 +226,7 @@ export function VoiceReceptionist() {
   useEffect(() => {
     if (messages.length > 0) {
       const last = messages[messages.length - 1]
-      if (last.type === "ai" && (last.text.includes("secured") || last.text.includes("all set") || last.text.includes("confirmed"))) {
+      if (last?.type === "ai" && (last?.text?.includes("secured") || last.text.includes("all set") || last.text.includes("confirmed"))) {
         tryCreateBooking()
       }
     }

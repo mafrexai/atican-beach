@@ -1,4 +1,6 @@
 import type { Room } from "@/types/database"
+import { createServerSupabaseClient } from './server';
+
 ﻿// ========== ROOM AVAILABILITY SYSTEM ==========
 
 export async function getAvailableRooms(): Promise<Room[]> {

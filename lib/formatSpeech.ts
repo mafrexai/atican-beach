@@ -42,8 +42,8 @@ export function formatForSpeech(text: string): string {
   // Replace standalone decimals: 2.5 guests
   formatted = formatted.replace(/\b(\d+\.\d+)\b/g, (match) => {
     const parts = match.split('.')
-    const intPart = numberToWords(parseInt(parts[0], 10))
-    const decPart = parts[1].split('').map((d) => units[parseInt(d)] || d).join(' ')
+    const intPart = numberToWords(parseInt(parts[0] || "0", 10))
+    const decPart = (parts[1] || "0").split('').map((d) => units[parseInt(d)] || d).join(' ')
     return intPart + ' point ' + decPart
   })
 

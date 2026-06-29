@@ -210,7 +210,7 @@ export function VoiceReceptionist() {
     const roomMatch = allText.match(/(standard|deluxe|double bed|family|executive|premium suite|executive suite|presidential suite)/i)
     if (!nameMatch || !emailMatch || !roomMatch) return
     const monthMap = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"}
-    const parseDate = (d) => { if (!d) return null; const m = d.match(/(d{1,2})s+(w+)/i); if (!m) return null; return new Date().getFullYear() + "-" + (monthMap[m[2].toLowerCase().substring(0,3)] || "01") + "-" + m[1].padStart(2,"0") }
+    const parseDate = (d: any) => { if (!d) return null; const m = d.match(/(d{1,2})s+(w+)/i); if (!m) return null; return new Date().getFullYear() + "-" + (monthMap[m[2].toLowerCase().substring(0,3)] || "01") + "-" + m[1].padStart(2,"0") }
     const ciMatch = allText.match(/(?:check-in|check in|arrival|from)[:s]+([ws]+d{1,2}[s,]+w+)/i)
     const coMatch = allText.match(/(?:check-out|check out|departure|to)[:s]+([ws]+d{1,2}[s,]+w+)/i)
     const guestsMatch = allText.match(/(d+)s*(?:guest|person|people|persons)/i)

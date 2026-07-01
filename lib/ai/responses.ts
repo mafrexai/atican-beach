@@ -104,12 +104,12 @@ export function generateResponse(message: string, context?: ResponseContext): st
       return `Here are our room options and prices per night:\n\n` +
         `🛏️ **Standard** - ₦55,000 (2 guests)\n` +
         `🛏️ **Deluxe** - ₦65,000 (2 guests)\n` +
-        `🛏️ **Double Bed** - ₦75,000 (2 guests)\n` +
-        `👨‍👩‍👧‍👦 **Family** - ₦95,000 (4 guests)\n` +
+        `🛏️ **Double Bed** - ₦80,000 (2 guests)\n` +
+        `👨‍👩‍👧‍👦 **Family** - ₦85,000 (4 guests)\n` +
         `⭐ **Executive** - ₦120,000 (2 guests)\n` +
-        `👑 **Premium Suite** - ₦180,000 (4 guests)\n` +
-        `🏆 **Executive Suite** - ₦250,000 (4 guests)\n` +
-        `🌟 **Presidential Suite** - ₦500,000 (6 guests)\n\n` +
+        `👑 **Premium Suite** - ₦100,000 (4 guests)\n` +
+        `🏆 **Executive Suite** - ₦120,000 (4 guests)\n` +
+        `🌟 **Presidential Suite** - ₦150,000 (6 guests)\n\n` +
         `Would you like to book a room or get more details about any specific type?`
     }
 
@@ -126,12 +126,12 @@ export function generateResponse(message: string, context?: ResponseContext): st
     return `We have 45 beautiful rooms and suites across 8 categories:\n\n` +
       `🛏️ **Standard** (₦55,000) - Cozy and comfortable\n` +
       `🛏️ **Deluxe** (₦65,000) - Upgraded with mini bar\n` +
-      `🛏️ **Double Bed** (₦75,000) - Ocean view included\n` +
-      `👨‍👩‍👧‍👦 **Family** (₦95,000) - Perfect for families (4 guests)\n` +
-      `⭐ **Executive** (₦120,000) - Lounge access\n` +
-      `👑 **Premium Suite** (₦180,000) - With Jacuzzi\n` +
-      `🏆 **Executive Suite** (₦250,000) - With butler service\n` +
-      `🌟 **Presidential Suite** (₦500,000) - Private pool & ultimate luxury\n\n` +
+      `🛏️ **Double Bed** (₦80,000) - Ocean view included\n` +
+      `👨‍👩‍👧‍👦 **Family** (₦85,000) - Perfect for families (4 guests)\n` +
+      `⭐ **Executive** (₦85,000) - Lounge access\n` +
+      `👑 **Premium Suite** (₦100,000) - With Jacuzzi\n` +
+      `🏆 **Executive Suite** (₦120,000) - With butler service\n` +
+      `🌟 **Presidential Suite** (₦150,000) - Private pool & ultimate luxury\n\n` +
       `Which room type interests you? I can provide more details or help you book!`
   }
 
@@ -325,8 +325,8 @@ export function generateResponse(message: string, context?: ResponseContext): st
       `🚗 Complimentary parking + valet\n` +
       `🎯 Beach experiences & activities\n` +
       `🎪 Event spaces & premium tents\n` +
-      `💆 Spa & wellness services\n` +
-      `🏋️ Fitness center\n\n` +
+      // `💆 Spa & wellness services\n` +
+      // `🏋️ Fitness center\n\n` +
       `All rooms include AC, TV, and WiFi. Higher-tier rooms include additional amenities like Mini Bar, Ocean View, Lounge, Jacuzzi, and Butler service.`
   }
 
@@ -335,8 +335,8 @@ export function generateResponse(message: string, context?: ResponseContext): st
     return `📋 **Modify or Cancel Booking:**\n\n` +
       `You can modify or cancel your booking:\n` +
       `• **Online:** Use your dashboard at /dashboard\n` +
-      `• **Phone:** Call +234 800 000 0000\n` +
-      `• **Email:** bookings@aticanbeach.com\n\n` +
+      `• **Phone:** Call +234 902 962 2583\n` +
+      `• **Email:** aticanbeachresort716@gmail.com\n\n` +
       `**Cancellation Policy:**\n` +
       `• 48+ hours before check-in: Full refund\n` +
       `• Within 48 hours: May incur one-night charge\n\n` +

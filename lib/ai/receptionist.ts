@@ -112,7 +112,7 @@ async function getOpenRouterResponse(
     headers: {
       'Authorization': 'Bearer ' + apiKey,
       'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aticanbeach.com',
+      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aticanbeachresort.com',
       'X-Title': 'Mafrex AI Receptionist',
     },
     body: JSON.stringify({

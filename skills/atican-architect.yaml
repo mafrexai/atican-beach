@@ -1,4 +1,4 @@
-name: atican-architect
+name: atican-bach
 description: Enforces Next.js 14 App Router patterns, TypeScript strict mode, 'use client' for interactive components, Zustand for cart, Zod for forms. Activate when building frontend components, pages, or client-side logic for Atican Beach Resort.
 
 rules:

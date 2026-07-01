@@ -1,21 +1,53 @@
 name: hotel-db-schema
-description: Manages 45-room inventory (Standard, Deluxe, Executive, Suites, Presidential), 8 tents, 4 experiences, 7 event spaces. Prevents double-booking with availability checks. Activate when working with database schema, room inventory, booking logic, or availability queries.
+description: Manages 45-room inventory (Standard, Deluxe, Double Bed, Family, Executive, Premium Suite, Executive Suite, Presidential), 8 tents, 4 experiences, 7 event spaces. Prevents double-booking with availability checks. Activate when working with database schema, room inventory, booking logic, or availability queries.
 
 inventory:
   rooms:
     total: 45
     types:
-      - { name: "Standard", count: 15, price: 55000, occupancy: 2, amenities: ["AC", "TV", "WiFi"] }
-      - { name: "Deluxe", count: 10, price: 65000, occupancy: 2, amenities: ["AC", "TV", "WiFi", "Mini Bar"] }
-      - { name: "Double Bed", count: 5, price: 75000, occupancy: 2, amenities: ["AC", "TV", "WiFi", "Mini Bar", "Ocean View"] }
-      - { name: "Family", count: 5, price: 95000, occupancy: 4, amenities: ["AC", "TV", "WiFi", "Mini Bar", "2 Bedrooms"] }
-      - { name: "Executive", count: 4, price: 120000, occupancy: 2, amenities: ["AC", "TV", "WiFi", "Mini Bar", "Ocean View", "Lounge"] }
-      - { name: "Premium Suite", count: 3, price: 180000, occupancy: 4, amenities: ["AC", "TV", "WiFi", "Mini Bar", "Ocean View", "Lounge", "Jacuzzi"] }
-      - { name: "Executive Suite", count: 2, price: 250000, occupancy: 4, amenities: ["AC", "TV", "WiFi", "Mini Bar", "Ocean View", "Lounge", "Jacuzzi", "Butler"] }
-      - { name: "Presidential Suite", count: 1, price: 500000, occupancy: 6, amenities: ["AC", "TV", "WiFi", "Mini Bar", "Ocean View", "Lounge", "Jacuzzi", "Butler", "Private Pool"] }
-  tents: { total: 8, types: ["Small Setup", "Medium Setup", "Large Setup", "XL Setup", "Photo Shoot", "Video Shoot", "VIP Event Space"] }
-  experiences: { total: 4, items: ["Bonfire", "Sack Race", "Beach Ball", "Horse Riding"] }
-  event_spaces: { total: 7, items: ["Small Setup", "Medium Setup", "Large Setup", "XL Setup", "Photo Shoot", "Video Shoot", "VIP Event Space"] }
+      - { name: "Standard", count: 3, price: 55000, occupancy: 2, room_numbers: ["702", "704", "706"], amenities: ["AC", "TV", "WiFi", "Water Heater"] }
+      - { name: "Deluxe", count: 12, price: 65000, occupancy: 2, room_numbers: ["201", "203", "205", "206", "207", "208", "209", "301", "302", "304", "305", "308"], amenities: ["AC", "TV", "WiFi", "Water Heater"] }
+      - { name: "Double Bed", count: 2, price: 80000, occupancy: 2, room_numbers: ["204", "307"], amenities: ["AC", "TV", "WiFi", "Water Heater"] }
+      - { name: "Family", count: 3, price: 85000, occupancy: 4, room_numbers: ["202", "303", "306"], amenities: ["AC", "TV", "WiFi", "Water Heater"] }
+      - { name: "Executive", count: 15, price: 85000, occupancy: 2, room_numbers: ["501", "503", "505", "601", "602", "603", "604", "605", "606", "701", "703", "705", "707", "708", "709"], amenities: ["AC", "TV", "WiFi", "Water Heater"] }
+      - { name: "Premium Suite", count: 4, price: 100000, occupancy: 4, room_numbers: ["309", "502", "504", "506"], amenities: ["AC", "TV", "WiFi", "Water Heater"] }
+      - { name: "Executive Suite", count: 4, price: 120000, occupancy: 4, room_numbers: ["401", "402", "403", "404"], amenities: ["AC", "TV", "WiFi", "Water Heater"] }
+      - { name: "Presidential Suite", count: 2, price: 150000, occupancy: 6, room_numbers: ["405", "406"], amenities: ["AC", "TV", "WiFi", "Water Heater"] }
+  
+  tents:
+    total: 8
+    types:
+      - { name: "Standard Atican Tent", price: 50000, capacity: "25 chairs + 3 tables", quantity: 3 }
+      - { name: "Space Atican Tent", price: 100000, capacity: "50 chairs + 6 tables", quantity: 2 }
+      - { name: "VIP Atican Tent", price: 300000, capacity: "100 chairs + 20 tables", quantity: 2 }
+      - { name: "VVIP Atican Tent", price: 300000, capacity: "Wooden chairs + sofas", quantity: 1 }
+  
+  experiences:
+    total: 4
+    items:
+      - { name: "Bonfire", price: 30000, unit: "per group" }
+      - { name: "Sack Race", price: 5000, unit: "per group" }
+      - { name: "Beach Ball", price: 10000, unit: "per group" }
+      - { name: "Horse Riding", price: 3000, unit: "per ride" }
+  
+  event_spaces:
+    total: 7
+    items:
+      - { name: "Small Setup", price: 15000, details: "5 Chairs + 1 Table" }
+      - { name: "Medium Setup", price: 30000, details: "Wooden Chairs + Sofas" }
+      - { name: "Large Setup", price: 50000, details: "25 Chairs + 3 Tables" }
+      - { name: "XL Setup", price: 100000, details: "50 Chairs + 6 Tables" }
+      - { name: "Photo Shoot", price: 50000, details: "Professional photography location" }
+      - { name: "Video Shoot", price: 100000, details: "Professional video location" }
+      - { name: "VIP Event Space", price: 300000, details: "Exclusive VIP area" }
+
+  gate_fees:
+    children_1_5: "Free"
+    children_6_14: 1000
+    adults: 2000
+  
+  corkage: 50000
+  short_rest: 25000
 
 rules:
   - "Always check availability before creating a booking (use lib/availability/checkAvailability.ts)"
@@ -27,6 +59,10 @@ rules:
   - "Use Supabase RLS for all table access"
   - "Booking statuses: pending, confirmed, checked_in, checked_out, cancelled"
   - "Payment statuses: pending, paid, refunded, failed"
+  - "Gate fees: Children 1-5 Free, Children 6-14 ₦1,000, Adults ₦2,000"
+  - "Corkage fee for external food/drinks: ₦50,000"
+  - "Short rest: ₦25,000 per hour"
+  - "All rooms have standard amenities: AC, TV, WiFi, Water Heater"
 
 file_patterns:
   - "supabase/migrations/*.sql"
@@ -40,3 +76,7 @@ tables:
   bookings: "id, booking_reference, guest_name, guest_email, guest_phone, check_in_date, check_out_date, total_amount, status, payment_status, confirmation_code, qr_code_url, special_requests, created_at"
   booking_items: "id, booking_id, item_type, item_id, item_name, quantity, unit_price, total_price, created_at"
   payments: "id, booking_id, amount, currency, payment_method, payment_reference, status, created_at"
+  user_roles: "id, user_id, role, staff_name, staff_email, is_active, created_at"
+  facility_maintenance: "id, room_id, reported_by, issue_type, description, priority, status, assigned_to, resolved_at, created_at"
+  staff_activity_logs: "id, user_id, action, details, ip_address, created_at"
+  follow_ups: "id, booking_id, assigned_to, follow_up_type, notes, status, due_date, completed_at, created_at"

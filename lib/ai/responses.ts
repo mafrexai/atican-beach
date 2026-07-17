@@ -10,12 +10,12 @@ interface ResponseContext {
 const roomInfo: Record<string, { price: string; occupancy: string; amenities: string }> = {
   'Standard': { price: '₦55,000', occupancy: '2 guests', amenities: 'AC, TV, WiFi' },
   'Deluxe': { price: '₦65,000', occupancy: '2 guests', amenities: 'AC, TV, WiFi, Mini Bar' },
-  'Double Bed': { price: '₦75,000', occupancy: '2 guests', amenities: 'AC, TV, WiFi, Mini Bar, Ocean View' },
-  'Family': { price: '₦95,000', occupancy: '4 guests', amenities: 'AC, TV, WiFi, Mini Bar, 2 Bedrooms' },
-  'Executive': { price: '₦120,000', occupancy: '2 guests', amenities: 'AC, TV, WiFi, Mini Bar, Ocean View, Lounge' },
-  'Premium Suite': { price: '₦180,000', occupancy: '4 guests', amenities: 'AC, TV, WiFi, Mini Bar, Ocean View, Lounge, Jacuzzi' },
-  'Executive Suite': { price: '₦250,000', occupancy: '4 guests', amenities: 'AC, TV, WiFi, Mini Bar, Ocean View, Lounge, Jacuzzi, Butler' },
-  'Presidential Suite': { price: '₦500,000', occupancy: '6 guests', amenities: 'AC, TV, WiFi, Mini Bar, Ocean View, Lounge, Jacuzzi, Butler, Private Pool' },
+  'Double Bed': { price: '₦80,000', occupancy: '2 guests', amenities: 'AC, TV, WiFi,' },
+  'Family': { price: '₦85,000', occupancy: '4 guests', amenities: 'AC, TV, WiFi, 2 Bedrooms' },
+  'Executive': { price: '₦85,000', occupancy: '2 guests', amenities: 'AC, TV, WiFi' },
+  'Premium Suite': { price: '₦100,000', occupancy: '4 guests', amenities: 'AC, TV, WiFi' },
+  'Executive Suite': { price: '₦120,000', occupancy: '4 guests', amenities: 'AC, TV, WiFi ' },
+  'Presidential Suite': { price: '₦150,000', occupancy: '6 guests', amenities: 'AC, TV, WiFi ' },
 }
 
 const policies = {
@@ -27,7 +27,7 @@ const policies = {
   parking: 'Yes, we offer complimentary secure parking for all guests. Valet parking is also available.',
   wifi: 'Yes, complimentary high-speed WiFi is available throughout the resort, including all rooms, common areas, and the beach.',
   pool: 'Yes, we have a stunning infinity pool overlooking the beach, available to all guests. The Presidential Suite also includes a private pool.',
-  pets: 'Unfortunately, pets are not allowed at the resort with the exception of service animals.',
+  pets: 'Yes pets are allowed at the resort.',
   smoking: 'No smoking inside rooms. Designated smoking areas are available outdoors.',
 }
 

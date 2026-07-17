@@ -102,32 +102,32 @@ async function getOpenRouterRecommendations(
   supabaseClient: any,
   apiKey: string
 ): Promise<ConciergeRecommendation[]> {
-  const model = 'google/gemini-2.0-flash-001'
+   const model = 'nvidia/nemotron-3-super-120b-a12b:free'
 
-  const response = await fetch(openrouterUrl, {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + apiKey,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aticanbeach.com',
-      'X-Title': 'Atican Beach AI Concierge',
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are the AI Concierge for Atican Beach Resort. Return ONLY a raw JSON array, no markdown, no code fences. Each item: {type, title, description, ctaText, ctaLink, priority}. Types: upgrade, experience, dining, event, bundle. Max 80 words per description. Use N for Naira. Priority 1-10.'
-        },
-        {
-          role: 'user',
-          content: 'Guest context: ' + JSON.stringify(context) + '. Suggest 1-2 personalized upsell recommendations.'
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 300,
-    }),
-  })
+   const response = await fetch(openrouterUrl, {
+     method: 'POST',
+     headers: {
+       'Authorization': 'Bearer ' + apiKey,
+       'Content-Type': 'application/json',
+       'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aticanbeach.com',
+       'X-Title': 'Atican Beach AI Concierge',
+     },
+     body: JSON.stringify({
+       model,
+       messages: [
+         {
+           role: 'system',
+           content: 'You are the AI Concierge for Atican Beach Resort. Return ONLY a raw JSON array, no markdown, no code fences. Each item: {type, title, description, ctaText, ctaLink, priority}. Types: upgrade, experience, dining, event, bundle. Max 80 words per description. Use N for Naira. Priority 1-10.'
+         },
+         {
+           role: 'user',
+           content: 'Guest context: ' + JSON.stringify(context) + '. Suggest 1-2 personalized upsell recommendations.'
+         }
+       ],
+       temperature: 0.7,
+       max_tokens: 300,
+     }),
+   })
 
   if (!response.ok) return []
   const data = await response.json()

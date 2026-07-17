@@ -105,29 +105,29 @@ async function getOpenRouterResponse(
     '9. Introduce yourself as Mafrex when relevant',
   ].join('\n')
 
-  console.log('[Mafrex AI] Sending request to OpenRouter with model: openrouter/owl-alpha...')
+   console.log('[Mafrex AI] Sending request to OpenRouter with model: nvidia/nemotron-3-super-120b-a12b:free...')
 
-  const response = await fetch(openrouterUrl, {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + apiKey,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aticanbeachresort.com',
-      'X-Title': 'Mafrex AI Receptionist',
-    },
-    body: JSON.stringify({
-      model: 'openrouter/owl-alpha',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are Mafrex, the AI Receptionist for Atican Beach Resort, a 7-star luxury beachfront resort in Okun-Ajah, Lagos, Nigeria. You are warm, professional, and have a Nigerian-friendly tone. You MUST use the LIVE data provided in the prompt for all prices and availability - never make up prices. Respond in plain text only - no markdown formatting. Your name is Mafrex. When asked who you are, say you are Mafrex, the AI assistant for Atican Beach Resort.'
-        },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 500,
-    }),
-  })
+   const response = await fetch(openrouterUrl, {
+     method: 'POST',
+     headers: {
+       'Authorization': 'Bearer ' + apiKey,
+       'Content-Type': 'application/json',
+       'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aticanbeachresort.com',
+       'X-Title': 'Mafrex AI Receptionist',
+     },
+     body: JSON.stringify({
+       model: 'nvidia/nemotron-3-super-120b-a12b:free',
+       messages: [
+         {
+           role: 'system',
+           content: 'You are Mafrex, the AI Receptionist for Atican Beach Resort, a 7-star luxury beachfront resort in Okun-Ajah, Lagos, Nigeria. You are warm, professional, and have a Nigerian-friendly tone. You MUST use the LIVE data provided in the prompt for all prices and availability - never make up prices. Respond in plain text only - no markdown formatting. Your name is Mafrex. When asked who you are, say you are Mafrex, the AI assistant for Atican Beach Resort.'
+         },
+         { role: 'user', content: userPrompt },
+       ],
+       temperature: 0.7,
+       max_tokens: 500,
+     }),
+   })
 
   if (!response.ok) {
     const errText = await response.text()

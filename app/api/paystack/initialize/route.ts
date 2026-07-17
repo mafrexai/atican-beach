@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { initializeTransaction, isPaystackConfigured } from '@/lib/paystack'
 import { apiSuccess, apiError } from '@/lib/api/responses'
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return apiError(`Validation failed: ${errors}`, 400, 'VALIDATION_ERROR')
     }
 
-    const { email, amount, bookingReference, callbackUrl } = result.data
+    const { email, bookingReference, callbackUrl } = result.data
 
     if (!isPaystackConfigured) {
       return apiError(
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Verify booking exists and is in pending status
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('id, booking_reference, total_amount, status')
+      .select('id, booking_reference, guest_email, total_amount, status, payment_status')
       .eq('booking_reference', bookingReference)
       .single()
 
@@ -42,10 +42,18 @@ export async function POST(request: NextRequest) {
       return apiError('Booking is not in pending status', 400, 'INVALID_BOOKING_STATUS')
     }
 
+    if (booking.payment_status !== 'unpaid') {
+      return apiError('Booking has already been paid', 400, 'ALREADY_PAID')
+    }
+
+    if (booking.guest_email.toLowerCase() !== email.toLowerCase()) {
+      return apiError('Booking email does not match', 403, 'BOOKING_EMAIL_MISMATCH')
+    }
+
     // Initialize Paystack transaction
     const response = await initializeTransaction({
       email,
-      amount,
+      amount: Number(booking.total_amount),
       reference: bookingReference,
       callback_url: callbackUrl,
       metadata: {

@@ -1,14 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase/server'
 import { apiSuccess, apiError } from '@/lib/api/responses'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { bookingReference, paymentStatus, status } = body as {
+    const { bookingReference } = body as {
       bookingReference: string
-      paymentStatus: string
-      status: string
     }
 
     if (!bookingReference) {
@@ -34,21 +32,10 @@ export async function POST(request: NextRequest) {
       return apiError('Booking not found or unauthorized', 404)
     }
 
-    const { error: updateError } = await supabase
-      .from('bookings')
-      .update({
-        payment_status: paymentStatus,
-        status: status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('booking_reference', bookingReference)
-
-    if (updateError) {
-      console.error('Payment status update error:', updateError)
-      return apiError(`Failed to update: ${updateError.message}`, 500)
-    }
-
-    return apiSuccess({ message: 'Payment status updated' })
+    return apiSuccess({
+      message: 'Payment status is managed by verified Paystack webhooks.',
+      reference: bookingReference,
+    })
   } catch (error) {
     console.error('Update payment API error:', error)
     return apiError(

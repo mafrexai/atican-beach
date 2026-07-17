@@ -2,6 +2,8 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { generateConfirmationCode, generateBookingReference } from '@/lib/utils/bookingCodes'
 import { sendBookingConfirmation } from '@/lib/email/sendConfirmation'
+import { aiBookingSchema } from '@/lib/api/validation'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import QRCode from 'qrcode'
 
 /**
@@ -10,68 +12,29 @@ import QRCode from 'qrcode'
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const {
-      guestName,
-      guestEmail,
-      guestPhone,
-      roomType,
-      checkIn,
-      checkOut,
-      guests,
-      specialRequests,
-    } = body as {
-      guestName: string
-      guestEmail: string
-      guestPhone?: string
-      roomType: string
-      checkIn: string
-      checkOut: string
-      guests: number
-      specialRequests?: string
+    const validation = aiBookingSchema.safeParse(await request.json())
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: validation.error.issues[0]?.message || 'Invalid booking details',
+      }, { status: 400 })
     }
 
-    if (!guestName || !guestEmail || !roomType || !checkIn || !checkOut) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields: name, email, roomType, checkIn, checkOut' },
-        { status: 400 }
-      )
+    const { guestName, guestEmail, guestPhone, roomType, checkIn, checkOut, guests, specialRequests } = validation.data
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const start = new Date(`${checkIn}T00:00:00`)
+    const end = new Date(`${checkOut}T00:00:00`)
+    if (start < today || end <= start) {
+      return NextResponse.json({
+        success: false,
+        error: 'Check-in must be today or later, and check-out must be after check-in.',
+      }, { status: 400 })
     }
 
-    const supabase = createAdminClient()
+    const supabase = createAdminClient() as SupabaseClient
 
-    // Find available room of the requested type
-    const { data: rooms, error: roomsError } = await supabase
-      .from('rooms')
-      .select('*')
-      .eq('room_type', roomType)
-      .eq('is_active', true)
-      .eq('status', 'available')
-      .limit(1)
-
-    if (roomsError || !rooms || rooms.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'No available ' + roomType + ' rooms found' },
-        { status: 404 }
-      )
-    }
-
-    const room = rooms[0]
-    const roomPrice = room.price_per_night
-
-    // Calculate number of nights
-    const start = new Date(checkIn)
-    const end = new Date(checkOut)
-    const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-
-    if (nights <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid dates: check-out must be after check-in' },
-        { status: 400 }
-      )
-    }
-
-    const totalAmount = roomPrice * nights
     const bookingReference = generateBookingReference()
     const confirmationCode = generateConfirmationCode()
 
@@ -82,50 +45,54 @@ export async function POST(request: NextRequest) {
     })
     const qrCode = await QRCode.toDataURL(qrData)
 
-    // Create the booking
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
-      .insert({
-        booking_reference: bookingReference,
-        confirmation_code: confirmationCode,
-        user_id: null,
-        guest_name: guestName,
-        guest_email: guestEmail,
-        guest_phone: guestPhone || null,
-        total_amount: totalAmount,
-        payment_status: 'unpaid',
-        status: 'pending',
-        qr_code: qrCode,
-        check_in_date: checkIn,
-        check_out_date: checkOut,
-        booking_type: 'online',
-        special_requests: specialRequests || null,
+    // The database function serializes room allocation and writes the booking
+    // plus its room line item in one transaction.
+    let { data: allocationRows, error: bookingError } = await supabase.rpc('create_room_booking_atomic', {
+      p_booking_reference: bookingReference,
+      p_confirmation_code: confirmationCode,
+      p_user_id: null,
+      p_guest_name: guestName,
+      p_guest_email: guestEmail,
+      p_guest_phone: guestPhone || '',
+      p_room_type: roomType,
+      p_check_in: checkIn,
+      p_check_out: checkOut,
+      p_guests: guests,
+      p_special_requests: specialRequests || '',
+      p_qr_code: qrCode,
+      p_booking_type: 'ai_assisted',
+    })
+
+    // Preview/local environments may not have the new migration yet. Keep the
+    // booking flow operational with a date-aware compatibility path; production
+    // should still apply the atomic migration for concurrency protection.
+    if (bookingError?.code === 'PGRST202') {
+      const fallback = await createCompatibleRoomBooking(supabase, {
+        bookingReference, confirmationCode, guestName, guestEmail,
+        guestPhone: guestPhone || '', roomType, checkIn, checkOut, guests,
+        specialRequests: specialRequests || '', qrCode,
       })
-      .select()
-      .single()
+      allocationRows = fallback.data
+      bookingError = fallback.error as typeof bookingError
+    }
 
     if (bookingError) {
       console.error('[AI Book] Booking creation error:', bookingError)
+      const unavailable = bookingError.message.includes('NO_ROOM_AVAILABLE')
       return NextResponse.json(
-        { success: false, error: 'Failed to create booking: ' + bookingError.message },
-        { status: 500 }
+        { success: false, error: unavailable ? `No ${roomType} room is available for those dates and guest count.` : 'Unable to create the booking. Please try again.' },
+        { status: unavailable ? 409 : 500 }
       )
     }
 
-    // Update room status to booked
-    await supabase.from('rooms').update({ status: 'booked' }).eq('id', room.id);
+    const allocation = allocationRows?.[0]
+    if (!allocation) {
+      return NextResponse.json({ success: false, error: 'Booking allocation was not returned.' }, { status: 500 })
+    }
 
-    // Create booking item
-    await supabase.from('booking_items').insert({
-      booking_id: booking.id,
-      item_type: 'room',
-      item_id: room.id,
-      quantity: nights,
-      price_at_booking: roomPrice,
-      start_date: checkIn,
-      end_date: checkOut,
-      metadata: { guests, room_number: room.room_number },
-    })
+    const roomPrice = Number(allocation.price_per_night)
+    const nights = Number(allocation.nights)
+    const totalAmount = Number(allocation.total_amount)
 
     // Send confirmation email
     try {
@@ -138,6 +105,7 @@ export async function POST(request: NextRequest) {
         guestName,
         checkIn,
         checkOut,
+        paymentPending: true,
       })
       console.log('[AI Book] Confirmation email sent to:', guestEmail)
     } catch (emailError) {
@@ -151,7 +119,7 @@ export async function POST(request: NextRequest) {
         reference: bookingReference,
         confirmationCode,
         roomType,
-        roomNumber: room.room_number,
+        roomNumber: allocation.room_number,
         checkIn,
         checkOut,
         nights,
@@ -167,4 +135,119 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+interface CompatibleBookingInput {
+  bookingReference: string
+  confirmationCode: string
+  guestName: string
+  guestEmail: string
+  guestPhone: string
+  roomType: string
+  checkIn: string
+  checkOut: string
+  guests: number
+  specialRequests: string
+  qrCode: string
+}
+
+interface BookingDatabaseError {
+  code: string
+  message: string
+  details: string
+  hint: string
+}
+
+async function createCompatibleRoomBooking(
+  supabase: SupabaseClient,
+  input: CompatibleBookingInput
+): Promise<{ data: Array<Record<string, unknown>> | null; error: BookingDatabaseError | null }> {
+  const { data: rooms, error: roomsError } = await supabase
+    .from('rooms')
+    .select('id, room_number, price_per_night, max_occupancy')
+    .eq('room_type', input.roomType)
+    .eq('is_active', true)
+    .eq('status', 'available')
+    .gte('max_occupancy', input.guests)
+    .order('room_number')
+
+  if (roomsError) return { data: null, error: roomsError }
+
+  let room: { id: string; room_number: string; price_per_night: number; max_occupancy: number } | null = null
+  for (const candidate of rooms || []) {
+    const { data: available, error: availabilityError } = await supabase.rpc('check_room_availability', {
+      p_room_id: candidate.id,
+      p_check_in: input.checkIn,
+      p_check_out: input.checkOut,
+    })
+    if (availabilityError) return { data: null, error: availabilityError }
+    if (available) {
+      room = candidate
+      break
+    }
+  }
+
+  if (!room) {
+    return { data: null, error: compatibilityError('NO_ROOM_AVAILABLE', 'No matching room is available for the selected dates.') }
+  }
+
+  const nights = Math.ceil((new Date(`${input.checkOut}T00:00:00`).getTime() - new Date(`${input.checkIn}T00:00:00`).getTime()) / 86_400_000)
+  const roomPrice = Number(room.price_per_night)
+  const totalAmount = roomPrice * nights
+
+  const { data: booking, error: bookingInsertError } = await supabase
+    .from('bookings')
+    .insert({
+      booking_reference: input.bookingReference,
+      confirmation_code: input.confirmationCode,
+      user_id: null,
+      guest_name: input.guestName,
+      guest_email: input.guestEmail,
+      guest_phone: input.guestPhone || null,
+      total_amount: totalAmount,
+      payment_status: 'unpaid',
+      status: 'pending',
+      qr_code: input.qrCode,
+      check_in_date: input.checkIn,
+      check_out_date: input.checkOut,
+      booking_type: 'ai_assisted',
+      special_requests: input.specialRequests || null,
+    })
+    .select('id')
+    .single()
+
+  if (bookingInsertError) return { data: null, error: bookingInsertError }
+  if (!booking) return { data: null, error: compatibilityError('BOOKING_INSERT_FAILED', 'The reservation record was not returned.') }
+
+  const { error: itemError } = await supabase.from('booking_items').insert({
+    booking_id: booking.id,
+    item_type: 'room',
+    item_id: room.id,
+    quantity: nights,
+    price_at_booking: roomPrice,
+    start_date: input.checkIn,
+    end_date: input.checkOut,
+    metadata: { guests: input.guests, room_number: room.room_number },
+  })
+
+  if (itemError) {
+    await supabase.from('bookings').delete().eq('id', booking.id)
+    return { data: null, error: itemError }
+  }
+
+  return {
+    data: [{
+      booking_id: booking.id,
+      room_id: room.id,
+      room_number: room.room_number,
+      price_per_night: roomPrice,
+      nights,
+      total_amount: totalAmount,
+    }],
+    error: null,
+  }
+}
+
+function compatibilityError(code: string, message: string): BookingDatabaseError {
+  return { code, message, details: message, hint: '' }
 }

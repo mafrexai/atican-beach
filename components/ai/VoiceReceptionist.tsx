@@ -1,10 +1,12 @@
 'use client'
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/immutability, react-hooks/set-state-in-effect, react-hooks/preserve-manual-memoization, react-hooks/exhaustive-deps */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Mic, MicOff, Volume2, VolumeX, Send, X,
-  Minimize2, Maximize2, MessageCircle,
+  Minimize2, Maximize2, MessageCircle, CalendarDays,
+  Users, CreditCard, CheckCircle2,
 } from 'lucide-react'
 import { speakText as ttsSpeakText } from '@/lib/tts'
 import { formatForSpeech } from '@/lib/formatSpeech'
@@ -26,42 +28,16 @@ export function VoiceReceptionist() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [voiceEnabled, setVoiceEnabled] = useState(true)
-  const [selectedVoice, setSelectedVoice] = useState<string>('')
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
   const [sessionId] = useState(() => "session_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6))
+  const [bookingDraft, setBookingDraft] = useState<BookingDraft>(emptyBookingDraft)
+  const [bookingStep, setBookingStep] = useState<'closed' | 'details' | 'review' | 'submitting' | 'complete'>('closed')
+  const [bookingResult, setBookingResult] = useState<BookingResult | null>(null)
+  const [bookingError, setBookingError] = useState('')
+  const [isStartingPayment, setIsStartingPayment] = useState(false)
 
   const recognitionRef = useRef<any>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // Load available voices
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const loadVoices = () => {
-      const voices = window.speechSynthesis.getVoices()
-      setAvailableVoices(voices)
-
-      // Prefer female Nigerian voice - check name patterns browsers actually use
-      const preferred =
-        voices.find((v) => v.lang === 'en-NG' && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman'))) ||
-        voices.find((v) => v.lang === 'en-NG') ||
-        voices.find((v) => v.name.toLowerCase().includes('samantha')) ||
-        voices.find((v) => v.name.toLowerCase().includes('zira')) ||
-        voices.find((v) => v.name.toLowerCase().includes('victoria')) ||
-        voices.find((v) => v.name.toLowerCase().includes('karen')) ||
-        voices.find((v) => v.lang.startsWith('en') && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman'))) ||
-        voices.find((v) => v.lang === 'en-GB' && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman'))) ||
-        voices.find((v) => v.lang === 'en-GB') ||
-        voices.find((v) => v.lang.startsWith('en'))
-      if (preferred) {
-        setSelectedVoice(preferred.name)
-    }
-    }
-
-    loadVoices()
-    window.speechSynthesis.onvoiceschanged = loadVoices
-  }, [])
 
   // Initialize speech recognition
   useEffect(() => {
@@ -187,6 +163,14 @@ export function VoiceReceptionist() {
       // Strip markdown asterisks for clean display
       aiResponse = aiResponse.replace(/\*\*/g, "").replace(/\*/g, "").replace(/^#{1,6}\s/gm, "").replace(/\s{2,}/g, " ").trim()
       addMessage('ai', aiResponse)
+      if (data.isBooking && bookingStep === 'closed') {
+        setBookingDraft((current) => ({
+          ...current,
+          roomType: data.bookingDetails?.roomType || current.roomType,
+          guests: data.bookingDetails?.guests || current.guests,
+        }))
+        setBookingStep('details')
+      }
       // For speech: strip emojis and bullet chars for smooth TTS
       const cleanForSpeech = aiResponse.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "").replace(/[-]\s*/g, "").replace(/\s{2,}/g, " ").trim()
        const speechReady = formatForSpeech(cleanForSpeech)
@@ -198,39 +182,61 @@ export function VoiceReceptionist() {
     } finally {
       setIsProcessing(false)
     }
-  }, [inputText, isProcessing, messages, addMessage, speakTextLocally])
+  }, [inputText, isProcessing, messages, addMessage, speakTextLocally, sessionId, bookingStep])
 
 
-  const tryCreateBooking = useCallback(async () => {
-    const allText = messages.map((m) => m.text).join(" ").toLowerCase()
-    if (!allText.includes("secured") && !allText.includes("all set") && !allText.includes("confirmed")) return
-    const nameMatch = allText.match(/(?:name|full name|guest name)[:s]+([a-z]+(?:s+[a-z]+)+)/i)
-    const emailMatch = allText.match(/([w.-]+@[w.-]+w+)/i)
-    const phoneMatch = allText.match(/(?:phone|number|tel)[:s]+([ds+()-]{8,})/i)
-    const roomMatch = allText.match(/(standard|deluxe|double bed|family|executive|premium suite|executive suite|presidential suite)/i)
-    if (!nameMatch || !emailMatch || !roomMatch) return
-    const monthMap = {jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"}
-    const parseDate = (d: any) => { if (!d) return null; const m = d.match(/(d{1,2})s+(w+)/i); if (!m) return null; return new Date().getFullYear() + "-" + (monthMap[m[2].toLowerCase().substring(0,3) as keyof typeof monthMap] || "01") + "-" + m[1].padStart(2,"0") }
-    const ciMatch = allText.match(/(?:check-in|check in|arrival|from)[:s]+([ws]+d{1,2}[s,]+w+)/i)
-    const coMatch = allText.match(/(?:check-out|check out|departure|to)[:s]+([ws]+d{1,2}[s,]+w+)/i)
-    const guestsMatch = allText.match(/(d+)s*(?:guest|person|people|persons)/i)
-    const checkIn = parseDate(ciMatch && ciMatch[1]) || new Date().toISOString().split("T")[0]
-    const checkOut = parseDate(coMatch && coMatch[1]) || new Date(Date.now()+86400000).toISOString().split("T")[0]
-    try {
-      const resp = await fetch("/api/ai/book", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ guestName:nameMatch[1]?.trim(), guestEmail:emailMatch[1]?.trim(), guestPhone:phoneMatch?phoneMatch?.[1]?.trim():undefined, roomType:roomMatch[1]?.split(" ").map((w)=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" "), checkIn, checkOut, guests:guestsMatch?parseInt(guestsMatch[1]||"0"):2 }) })
-      const result = await resp.json()
-      if (result.success) addMessage("ai", " Booking " + result.booking.reference + " confirmed. Email sent to " + result.booking.guestEmail + ".")
-    } catch(e) { console.error("[Mafrex AI] Booking error:", e) }
-  }, [messages, addMessage])
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      const last = messages[messages.length - 1]
-      if (last?.type === "ai" && (last?.text?.includes("secured") || last.text.includes("all set") || last.text.includes("confirmed"))) {
-        tryCreateBooking()
-      }
+  const reviewBooking = () => {
+    setBookingError('')
+    if (!bookingDraft.guestName.trim() || !bookingDraft.guestEmail.trim() || !bookingDraft.checkIn || !bookingDraft.checkOut) {
+      setBookingError('Please complete your name, email, check-in, and check-out dates.')
+      return
     }
-  }, [messages, tryCreateBooking])
+    if (bookingDraft.checkOut <= bookingDraft.checkIn) {
+      setBookingError('Check-out must be after check-in.')
+      return
+    }
+    setBookingStep('review')
+  }
+
+  const confirmBooking = async () => {
+    setBookingStep('submitting')
+    setBookingError('')
+    try {
+      const response = await fetch('/api/ai/book', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bookingDraft),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || 'Unable to create your reservation.')
+      setBookingResult(result.booking)
+      setBookingStep('complete')
+      addMessage('ai', `Your room is reserved under ${result.booking.reference}. It will be confirmed after secure payment.`)
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'Unable to create your reservation.')
+      setBookingStep('review')
+    }
+  }
+
+  const startPayment = async () => {
+    if (!bookingResult) return
+    setIsStartingPayment(true)
+    setBookingError('')
+    try {
+      const response = await fetch('/api/paystack/initialize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: bookingResult.guestEmail,
+          bookingReference: bookingResult.reference,
+          callbackUrl: `${window.location.origin}/booking/confirmation?ref=${bookingResult.reference}`,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || 'Unable to start payment.')
+      window.location.assign(result.data.authorization_url)
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : 'Unable to start payment.')
+      setIsStartingPayment(false)
+    }
+  }
 
   const startListening = () => {
     if (recognitionRef.current) {
@@ -378,6 +384,66 @@ export function VoiceReceptionist() {
                     </div>
                   )}
 
+                  {bookingStep !== 'closed' && (
+                    <div className="rounded-2xl border border-[#0A3D62]/15 bg-white p-3 shadow-sm">
+                      <div className="mb-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#F97316]">Secure reservation</p>
+                          <p className="text-sm font-semibold text-[#082032]">
+                            {bookingStep === 'details' && 'Tell us about your stay'}
+                            {(bookingStep === 'review' || bookingStep === 'submitting') && 'Review before reserving'}
+                            {bookingStep === 'complete' && 'Room reserved'}
+                          </p>
+                        </div>
+                        {bookingStep !== 'submitting' && bookingStep !== 'complete' && (
+                          <button type="button" onClick={() => setBookingStep('closed')} className="p-1 text-gray-400 hover:text-gray-700" aria-label="Close booking form"><X className="h-4 w-4" /></button>
+                        )}
+                      </div>
+
+                      {bookingStep === 'details' && (
+                        <div className="space-y-2.5">
+                          <div className="grid grid-cols-2 gap-2">
+                            <input aria-label="Full name" placeholder="Full name" value={bookingDraft.guestName} onChange={(e) => setBookingDraft({ ...bookingDraft, guestName: e.target.value })} className="col-span-2 rounded-lg border border-gray-200 px-2.5 py-2 text-xs text-gray-900 outline-none focus:border-[#0A3D62]" />
+                            <input aria-label="Email" type="email" placeholder="Email address" value={bookingDraft.guestEmail} onChange={(e) => setBookingDraft({ ...bookingDraft, guestEmail: e.target.value })} className="col-span-2 rounded-lg border border-gray-200 px-2.5 py-2 text-xs text-gray-900 outline-none focus:border-[#0A3D62]" />
+                            <input aria-label="Phone" type="tel" placeholder="Phone number" value={bookingDraft.guestPhone} onChange={(e) => setBookingDraft({ ...bookingDraft, guestPhone: e.target.value })} className="col-span-2 rounded-lg border border-gray-200 px-2.5 py-2 text-xs text-gray-900 outline-none focus:border-[#0A3D62]" />
+                            <select aria-label="Room type" value={bookingDraft.roomType} onChange={(e) => setBookingDraft({ ...bookingDraft, roomType: e.target.value })} className="col-span-2 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs text-gray-900 outline-none focus:border-[#0A3D62]">
+                              {roomTypes.map((roomType) => <option key={roomType}>{roomType}</option>)}
+                            </select>
+                            <label className="text-[10px] font-medium text-gray-500"><span className="mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3" /> Check-in</span><input type="date" min={new Date().toISOString().split('T')[0]} value={bookingDraft.checkIn} onChange={(e) => setBookingDraft({ ...bookingDraft, checkIn: e.target.value })} className="w-full rounded-lg border border-gray-200 px-2 py-2 text-xs text-gray-900" /></label>
+                            <label className="text-[10px] font-medium text-gray-500"><span className="mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3" /> Check-out</span><input type="date" min={bookingDraft.checkIn || new Date().toISOString().split('T')[0]} value={bookingDraft.checkOut} onChange={(e) => setBookingDraft({ ...bookingDraft, checkOut: e.target.value })} className="w-full rounded-lg border border-gray-200 px-2 py-2 text-xs text-gray-900" /></label>
+                            <label className="col-span-2 text-[10px] font-medium text-gray-500"><span className="mb-1 flex items-center gap-1"><Users className="h-3 w-3" /> Guests</span><input type="number" min="1" max="12" value={bookingDraft.guests} onChange={(e) => setBookingDraft({ ...bookingDraft, guests: Number(e.target.value) })} className="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-xs text-gray-900" /></label>
+                            <textarea aria-label="Special requests" placeholder="Special requests (optional)" value={bookingDraft.specialRequests} onChange={(e) => setBookingDraft({ ...bookingDraft, specialRequests: e.target.value })} className="col-span-2 resize-none rounded-lg border border-gray-200 px-2.5 py-2 text-xs text-gray-900 outline-none focus:border-[#0A3D62]" rows={2} />
+                          </div>
+                          <button type="button" onClick={reviewBooking} className="w-full rounded-lg bg-[#0A3D62] px-3 py-2.5 text-xs font-semibold text-white hover:bg-[#08324f]">Review reservation</button>
+                        </div>
+                      )}
+
+                      {(bookingStep === 'review' || bookingStep === 'submitting') && (
+                        <div className="space-y-3 text-xs text-gray-600">
+                          <div className="rounded-xl bg-[#F5F1E8] p-3">
+                            <p className="font-semibold text-[#082032]">{bookingDraft.roomType} · {bookingDraft.guests} guest{bookingDraft.guests === 1 ? '' : 's'}</p>
+                            <p className="mt-1">{bookingDraft.checkIn} → {bookingDraft.checkOut}</p>
+                            <p className="mt-1">{bookingDraft.guestName} · {bookingDraft.guestEmail}</p>
+                          </div>
+                          <p className="text-[10px] leading-relaxed text-gray-500">We will reserve an available room for these exact dates. Your stay becomes confirmed only after Paystack verifies payment.</p>
+                          <div className="flex gap-2">
+                            <button type="button" disabled={bookingStep === 'submitting'} onClick={() => setBookingStep('details')} className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 font-semibold text-gray-600 disabled:opacity-50">Edit</button>
+                            <button type="button" disabled={bookingStep === 'submitting'} onClick={confirmBooking} className="flex-1 rounded-lg bg-[#F97316] px-3 py-2.5 font-semibold text-white disabled:opacity-60">{bookingStep === 'submitting' ? 'Reserving…' : 'Reserve room'}</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {bookingStep === 'complete' && bookingResult && (
+                        <div className="space-y-3 text-xs">
+                          <div className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-emerald-900"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-semibold">Reference {bookingResult.reference}</p><p className="mt-1">{bookingResult.roomType}, room {bookingResult.roomNumber} · ₦{bookingResult.totalAmount.toLocaleString()}</p></div></div>
+                          <button type="button" onClick={startPayment} disabled={isStartingPayment} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#0A3D62] px-3 py-2.5 font-semibold text-white disabled:opacity-60"><CreditCard className="h-4 w-4" />{isStartingPayment ? 'Opening Paystack…' : 'Pay securely with Paystack'}</button>
+                        </div>
+                      )}
+
+                      {bookingError && <p role="alert" className="mt-2 rounded-lg bg-red-50 p-2 text-[11px] text-red-700">{bookingError}</p>}
+                    </div>
+                  )}
+
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -451,4 +517,33 @@ export function VoiceReceptionist() {
       </AnimatePresence>
     </>
   )
+}
+
+interface BookingDraft {
+  guestName: string
+  guestEmail: string
+  guestPhone: string
+  roomType: string
+  checkIn: string
+  checkOut: string
+  guests: number
+  specialRequests: string
+}
+
+interface BookingResult {
+  reference: string
+  roomType: string
+  roomNumber: string
+  checkIn: string
+  checkOut: string
+  nights: number
+  totalAmount: number
+  guestEmail: string
+}
+
+const roomTypes = ['Standard', 'Deluxe', 'Double Bed', 'Family', 'Executive', 'Premium Suite', 'Executive Suite', 'Presidential Suite']
+
+const emptyBookingDraft: BookingDraft = {
+  guestName: '', guestEmail: '', guestPhone: '', roomType: 'Deluxe',
+  checkIn: '', checkOut: '', guests: 2, specialRequests: '',
 }

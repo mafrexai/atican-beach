@@ -1,4 +1,4 @@
-import { getRooms, getRoomTypes } from '@/lib/supabase/queries'
+import { getAvailableRoomsForDates, getRooms, getRoomTypes } from '@/lib/supabase/queries'
 import { Waves, Users, Search, SlidersHorizontal } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -25,15 +25,17 @@ const priceRanges = [
 export default async function RoomsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; price?: string; search?: string }>
+  searchParams: Promise<{ type?: string; price?: string; search?: string; checkIn?: string; checkOut?: string; guests?: string }>
 }) {
   const params = await searchParams
   const filterType = params.type
   const filterPrice = params.price
   const searchQuery = params.search?.toLowerCase()
+  const requestedGuests = Math.max(1, Math.min(12, Number(params.guests) || 1))
+  const hasDateSearch = Boolean(params.checkIn && params.checkOut)
 
   const [rooms, roomTypes] = await Promise.all([
-    getRooms(),
+    hasDateSearch ? getAvailableRoomsForDates(params.checkIn!, params.checkOut!, requestedGuests) : getRooms(),
     getRoomTypes(),
  ])
 
@@ -78,6 +80,12 @@ export default async function RoomsPage({
 
       {/* Search & Filters */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {hasDateSearch && (
+          <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-[#0F766E]/20 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[#0F766E]">Available for your stay</p><p className="mt-1 font-semibold text-[#082032]">{params.checkIn} → {params.checkOut} · {requestedGuests} guest{requestedGuests === 1 ? '' : 's'}</p></div>
+            <Link href="/rooms" className="text-sm font-semibold text-[#0A3D62] hover:text-[#F97316]">Clear dates</Link>
+          </div>
+        )}
         {/* Search Bar */}
         <div className="mb-6">
           <form method="GET" className="flex gap-3">

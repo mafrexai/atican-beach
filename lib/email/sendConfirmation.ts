@@ -2,7 +2,7 @@ import { Resend } from 'resend'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 
-let resend: any = null
+let resend: Resend | null = null
 if (RESEND_API_KEY) {
   resend = new Resend(RESEND_API_KEY)
 }
@@ -16,6 +16,7 @@ interface ConfirmationData {
   guestName: string
   checkIn?: string
   checkOut?: string
+  paymentPending?: boolean
 }
 
 export async function sendBookingConfirmation(
@@ -43,30 +44,30 @@ export async function sendBookingConfirmation(
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Booking Confirmation - Atican Beach Resort</title>
+      <title>${data.paymentPending ? 'Reservation Received' : 'Booking Confirmation'} - Atican Beach Resort</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f5;">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: white;">
         <tr>
           <td style="background: linear-gradient(135deg, #0099ff, #ff6600); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">Booking Confirmed!</h1>
+            <h1 style="color: white; margin: 0; font-size: 24px;">${data.paymentPending ? 'Reservation Received' : 'Booking Confirmed!'}</h1>
             <p style="color: white; margin: 10px 0 0; font-size: 14px;">Atican Beach Resort & Hotel</p>
           </td>
         </tr>
         <tr>
           <td style="padding: 30px;">
             <p>Dear ${data.guestName},</p>
-            <p>Thank you for choosing Atican Beach Resort. Your booking has been confirmed.</p>
+            <p>${data.paymentPending ? 'We have reserved your selected room. Complete payment to confirm your stay.' : 'Thank you for choosing Atican Beach Resort. Your payment is verified and your booking is confirmed.'}</p>
             <table style="width: 100%; background: #f9f9f9; border-radius: 8px; padding: 15px; margin: 20px 0;">
               <tr><td><strong>Booking Reference:</strong></td><td style="text-align: right; font-size: 18px; color: #0099ff;">${data.bookingReference}</td></tr>
               <tr><td><strong>Confirmation Code:</strong></td><td style="text-align: right; font-size: 18px; color: #ff6600;">${data.confirmationCode}</td></tr>
               ${data.checkIn ? `<tr><td><strong>Check-in:</strong></td><td style="text-align: right;">${data.checkIn}</td></tr>` : ''}
               ${data.checkOut ? `<tr><td><strong>Check-out:</strong></td><td style="text-align: right;">${data.checkOut}</td></tr>` : ''}
             </table>
-            <div style="text-align: center; margin: 30px 0;">
+            ${data.paymentPending ? '<p style="padding: 14px; border-radius: 8px; background: #fff7ed; color: #9a3412;"><strong>Payment required:</strong> this reservation is not yet confirmed for entry.</p>' : `<div style="text-align: center; margin: 30px 0;">
               <img src="${data.qrCode}" alt="QR Code" style="max-width: 200px;" />
               <p style="color: #666; font-size: 12px;">Show this QR code at the gate for entry</p>
-            </div>
+            </div>`}
             <p>We look forward to welcoming you!</p>
           </td>
         </tr>
@@ -84,7 +85,7 @@ export async function sendBookingConfirmation(
     await resend.emails.send({
       from: 'Atican Beach <bookings@aticanbeach.com>',
       to: [email],
-      subject: `Booking Confirmed - ${data.bookingReference}`,
+      subject: `${data.paymentPending ? 'Reservation Received' : 'Booking Confirmed'} - ${data.bookingReference}`,
       html,
     })
   } catch (error) {

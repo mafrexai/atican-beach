@@ -29,20 +29,40 @@ export async function POST(request: NextRequest) {
     const isBooking = detectBookingIntent(message)
     const bookingDetails = isBooking ? extractBookingDetails(message) : null
 
-    // Generate response (Gemini with knowledge base, or fallback to rule-based)
+    // Booking introductions are deterministic so model reasoning can never leak
+    // into a revenue-critical guest flow. The structured form handles the rest.
     let reply: string
-    try {
-      reply = await getReceptionistResponse(message, {
-        page: currentPage,
-        conversationHistory: conversationHistory || [],
-      }, supabase)
-    } catch (error) {
-      console.error('AI response error, using fallback:', error)
-      reply = fallbackResponse(message, {
-        page: currentPage,
-        conversationHistory: conversationHistory || [],
-      })
+    if (isBooking && bookingDetails?.roomType) {
+      const { data: matchingRooms } = await supabase
+        .from('rooms')
+        .select('price_per_night')
+        .eq('room_type', bookingDetails.roomType)
+        .eq('is_active', true)
+        .eq('status', 'available')
+        .order('price_per_night', { ascending: true })
+        .limit(1)
+
+      const price = Number(matchingRooms?.[0]?.price_per_night)
+      const priceText = Number.isFinite(price) && price > 0
+        ? ` at ${price.toLocaleString('en-NG')} Naira per night`
+        : ''
+      reply = `Absolutely — I can help you reserve a ${bookingDetails.roomType} room${priceText}. Please complete the secure reservation details below so I can check your exact dates and guest count.`
+    } else {
+      try {
+        reply = await getReceptionistResponse(message, {
+          page: currentPage,
+          conversationHistory: conversationHistory || [],
+        }, supabase)
+      } catch (error) {
+        console.error('AI response error, using fallback:', error)
+        reply = fallbackResponse(message, {
+          page: currentPage,
+          conversationHistory: conversationHistory || [],
+        })
+      }
     }
+
+    reply = sanitizeGuestReply(reply, isBooking)
 
     // Save conversation to database
     if (sessionId) {
@@ -71,6 +91,25 @@ export async function POST(request: NextRequest) {
       error: 'Internal server error',
     }, { status: 500 })
   }
+}
+
+function sanitizeGuestReply(reply: string, isBooking: boolean): string {
+  const cleaned = (reply || '')
+    .replace(/₦\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)/g, '$1 Naira')
+    .replace(/\bN(\d{1,3}(?:,\d{3})*(?:\.\d+)?)/g, '$1 Naira')
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .replace(/^#{1,6}\s/gm, '')
+    .trim()
+
+  const reasoningLeak = /\b(we need to respond|let(?:'s| us) (?:respond|extract|check)|should (?:respond|mention)|use exact price|system prompt|conversation history)\b/i.test(cleaned)
+  if (reasoningLeak) {
+    return isBooking
+      ? 'I can help you reserve that room. Please complete the secure reservation details below so I can check your dates, confirm the total, and arrange secure payment.'
+      : 'I can help with rooms, dining, experiences, events, and resort information. What would you like to know?'
+  }
+
+  return cleaned
 }
 
 export async function GET() {

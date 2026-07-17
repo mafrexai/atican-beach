@@ -1,124 +1,115 @@
+import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, Star, Waves, Tent, UtensilsCrossed, Sparkles } from 'lucide-react'
+import {
+  ArrowRight, CalendarDays, Clock3, MapPin, ShieldCheck,
+  Sparkles, Star, Sun, Users, Waves,
+} from 'lucide-react'
 import { getFeaturedRooms } from '@/lib/supabase/queries'
 
-const features = [
-  { icon: Waves, title: 'Beachfront Luxury', desc: 'Wake up to the sound of waves in our premium rooms and suites' },
-  { icon: Tent, title: 'Event Tents', desc: 'Host unforgettable events with our premium tent setups' },
-  { icon: Sparkles, title: 'Experiences', desc: 'Bonfire nights, horse riding, beach games and more' },
-  { icon: UtensilsCrossed, title: 'Fine Dining', desc: 'Savor exquisite cuisine at our ocean-view restaurant' },
+const escapes = [
+  { title: 'Stay by the ocean', copy: 'Wake to Atlantic light, soft linen and the hush of the tide.', href: '/rooms', image: '/hero-beach1.jpg', eyebrow: 'Rooms & suites' },
+  { title: 'Celebrate on the sand', copy: 'Turn weddings, birthdays and private gatherings into golden memories.', href: '/events', image: '/images/banner1.jpeg', eyebrow: 'Beach events' },
+  { title: 'Play until sunset', copy: 'Horse rides, beach games, bonfires and slow afternoons by the water.', href: '/experiences', image: '/images/banner3.jpeg', eyebrow: 'Experiences' },
+]
+
+const dayPlan = [
+  { time: '8:00', title: 'Breakfast by the ocean', copy: 'Fresh flavours and an unhurried start with the Atlantic in view.' },
+  { time: '11:00', title: 'Swim, play, exhale', copy: 'Move between beach games, cool water and a shaded lounger.' },
+  { time: '16:30', title: 'Golden-hour adventure', copy: 'Ride the shoreline or explore the beach as the light turns amber.' },
+  { time: '20:30', title: 'Bonfire beneath the stars', copy: 'End the day with music, warm sand and your favourite people.' },
 ]
 
 export default async function HomePage() {
-  const featuredRooms = await getFeaturedRooms(5)
+  const featuredRooms = await getFeaturedRooms(3)
 
   return (
-    <div>
-      {/* Hero */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0A3D62]/80 via-[#082032]/60 to-[#F97316]/40 z-10" />
-        <div className="absolute inset-0 bg-[url('/hero-beach.jpg')] bg-cover bg-center" />
-        <div className="relative z-20 text-center text-white px-4 max-w-4xl mx-auto animate-fade-in">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            {[...Array(0)].map((_, i) => (
-              <Star key={i} className="w-5 h-5 fill-[#D4AF37] text-[#D4AF37]" />
-            ))}
-          </div>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6" style={{ fontFamily: 'var(--font-playfair)' }}>
-            Atican Beach Resort & Hotel.
-          </h1>
-          <p className="text-xl md:text-2xl text-blue-100 mb-8">
-          Ocean Views Timeless Memories. Experience exceptional hospitality by the beach
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/rooms" className="bg-[#0A3D62] text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#08324f] transition-colors inline-flex items-center gap-2">
-              Book Your Stay <ArrowRight className="w-5 h-5" />
-            </Link>
-            <Link href="/experiences" className="bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white/30 transition-colors border border-white/30">
-              Explore Experiences
-            </Link>
-          </div>
-        </div>
-      </section>
+    <div className="overflow-hidden bg-[#FFFDF7] text-[#073B4C]">
+      <section className="relative -mt-16 min-h-[860px] lg:min-h-[900px]">
+        <Image src="/hero-beach.jpg" alt="Atican Beach Resort shoreline and tropical palms" fill priority className="object-cover object-center" sizes="100vw" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,35,46,.82)_0%,rgba(7,59,76,.48)_48%,rgba(7,59,76,.12)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(7,59,76,.6)_0%,transparent_45%)]" />
 
-      {/* Features */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#082032] mb-4" style={{ fontFamily: 'var(--font-playfair)' }}>Why Choose Atican Beach</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">Discover what makes us the premier beachfront destination</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((f) => (
-              <div key={f.title} className="text-center p-6 rounded-xl hover:bg-[#F5F1E8] transition-colors">
-                <div className="w-16 h-16 bg-[#0A3D62]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <f.icon className="w-8 h-8 text-[#0A3D62]" />
-                </div>
-                <h3 className="text-xl font-semibold text-[#082032] mb-2">{f.title}</h3>
-                <p className="text-gray-600">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Room Types - Live from Supabase */}
-      <section className="py-20 bg-[#F5F1E8]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#082032] mb-4" style={{ fontFamily: 'var(--font-playfair)' }}>Accommodations</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">From cozy standard rooms to the lavish presidential suite</p>
-          </div>
-          {featuredRooms.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No rooms available at the moment. Please check back later.</p>
+        <div className="relative z-10 mx-auto flex min-h-[760px] max-w-7xl items-center px-5 pt-24 sm:px-8 lg:min-h-[800px]">
+          <div className="max-w-3xl text-white">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] backdrop-blur-md">
+              <Sun className="h-4 w-4 text-[#E8B44F]" /> Beachfront escape · Lagos
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-              {featuredRooms.map((room) => (
-                <div
-                  key={room.id}
-                  className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
-                >
-                  <Link href={`/rooms/${room.id}`}>
-                    <div className="h-48 bg-gradient-to-br from-[#0A3D62] to-[#08324f] flex items-center justify-center relative overflow-hidden">
-                      {room.image_url ? (
-                        <img src={room.image_url} alt={room.image_alt || room.room_type} className="w-full h-full object-cover" />
-                      ) : (
-                        <Waves className="w-16 h-16 text-white/50" />
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-semibold text-[#082032]">{room.room_type}</h3>
-                      <p className="text-sm text-gray-500 mb-1">Room {room.room_number}</p>
-                      <p className="text-[#0A3D62] font-bold mt-1">
-                        ₦{room.price_per_night.toLocaleString()}
-                        <span className="text-gray-400 text-sm font-normal">/night</span>
-                      </p>
-                    </div>
-                  </Link>
-                </div>
+            <h1 className="max-w-3xl font-display text-5xl font-medium leading-[.98] tracking-[-0.035em] sm:text-6xl lg:text-[5.4rem]">
+              Your escape begins at the water&apos;s edge.
+            </h1>
+            <p className="mt-7 max-w-2xl text-lg leading-8 text-white/85 sm:text-xl">
+              Golden mornings, oceanfront stays and unforgettable nights—made for the people you never want to leave.
+            </p>
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <Link href="/rooms" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#F47C5C] px-7 py-4 text-sm font-bold text-white shadow-[0_18px_45px_rgba(244,124,92,.3)] transition hover:-translate-y-0.5 hover:bg-[#e86d4d]">
+                Find your room <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="/experiences" className="inline-flex items-center justify-center rounded-full border border-white/35 bg-white/10 px-7 py-4 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20">
+                Explore the experience
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <form action="/rooms" method="get" className="absolute inset-x-4 bottom-8 z-20 mx-auto grid max-w-6xl gap-2 rounded-[1.75rem] border border-white/40 bg-white/95 p-3 shadow-[0_28px_80px_rgba(7,59,76,.25)] backdrop-blur-xl sm:inset-x-8 md:grid-cols-[1fr_1fr_.8fr_auto] md:items-end md:p-4">
+          <label className="rounded-2xl px-3 py-2 text-xs font-semibold uppercase tracking-[.13em] text-[#52717b]"><span className="mb-2 flex items-center gap-2"><CalendarDays className="h-4 w-4 text-[#0F766E]" /> Check-in</span><input type="date" name="checkIn" required className="w-full bg-transparent text-sm font-semibold normal-case tracking-normal text-[#073B4C] outline-none" /></label>
+          <label className="rounded-2xl px-3 py-2 text-xs font-semibold uppercase tracking-[.13em] text-[#52717b]"><span className="mb-2 flex items-center gap-2"><CalendarDays className="h-4 w-4 text-[#0F766E]" /> Check-out</span><input type="date" name="checkOut" required className="w-full bg-transparent text-sm font-semibold normal-case tracking-normal text-[#073B4C] outline-none" /></label>
+          <label className="rounded-2xl px-3 py-2 text-xs font-semibold uppercase tracking-[.13em] text-[#52717b]"><span className="mb-2 flex items-center gap-2"><Users className="h-4 w-4 text-[#0F766E]" /> Guests</span><select name="guests" defaultValue="2" className="w-full bg-transparent text-sm font-semibold normal-case tracking-normal text-[#073B4C] outline-none"><option value="1">1 guest</option><option value="2">2 guests</option><option value="3">3 guests</option><option value="4">4 guests</option><option value="6">5–6 guests</option></select></label>
+          <button type="submit" className="rounded-2xl bg-[#073B4C] px-7 py-4 text-sm font-bold text-white transition hover:bg-[#0F766E]">Check availability</button>
+        </form>
+      </section>
+
+      <section className="px-5 py-24 sm:px-8 lg:py-32">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:items-end">
+            <div><p className="text-xs font-bold uppercase tracking-[.24em] text-[#F47C5C]">Choose your kind of escape</p><h2 className="mt-4 font-display text-4xl leading-tight text-[#073B4C] sm:text-5xl">Come for the ocean.<br />Stay for the feeling.</h2></div>
+            <p className="max-w-2xl text-lg leading-8 text-[#52717b] lg:justify-self-end">Atican is where the city loosens its grip. Settle into a room, gather your favourite people and let the day unfold at beach pace.</p>
+          </div>
+          <div className="mt-14 grid gap-5 md:grid-cols-3">
+            {escapes.map((escape, index) => (
+              <Link key={escape.title} href={escape.href} className={`group relative min-h-[480px] overflow-hidden rounded-[2rem] ${index === 1 ? 'md:translate-y-8' : ''}`}>
+                <Image src={escape.image} alt={escape.title} fill className="object-cover transition duration-700 group-hover:scale-105" sizes="(max-width: 768px) 100vw, 33vw" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#03232e]/90 via-[#073B4C]/15 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-7 text-white"><p className="text-[11px] font-bold uppercase tracking-[.2em] text-[#E8B44F]">{escape.eyebrow}</p><h3 className="mt-2 font-display text-3xl">{escape.title}</h3><p className="mt-3 text-sm leading-6 text-white/75">{escape.copy}</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-bold">Discover more <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span></div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#EAF5F2] px-5 py-24 sm:px-8 lg:py-32">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end"><div><p className="text-xs font-bold uppercase tracking-[.24em] text-[#0F766E]">Sleep beautifully</p><h2 className="mt-4 font-display text-4xl sm:text-5xl">Your room by the sea</h2></div><Link href="/rooms" className="inline-flex items-center gap-2 text-sm font-bold text-[#073B4C]">Explore all rooms <ArrowRight className="h-4 w-4" /></Link></div>
+          {featuredRooms.length > 0 ? (
+            <div className="mt-12 grid gap-6 lg:grid-cols-3">
+              {featuredRooms.map((room, index) => (
+                <Link key={room.id} href={`/rooms/${room.id}`} className={`group overflow-hidden rounded-[1.75rem] bg-white shadow-[0_18px_50px_rgba(7,59,76,.08)] ${index === 0 ? 'lg:col-span-2 lg:grid lg:grid-cols-[1.35fr_.65fr]' : ''}`}>
+                  <div className={`relative min-h-[300px] overflow-hidden ${index === 0 ? 'lg:min-h-[470px]' : ''}`}>
+                    {room.image_url ? <Image src={room.image_url} alt={room.image_alt || room.room_type} fill className="object-cover transition duration-700 group-hover:scale-105" sizes={index === 0 ? '(max-width: 1024px) 100vw, 55vw' : '(max-width: 1024px) 100vw, 30vw'} /> : <Image src="/hero-beach1.jpg" alt="Atican beachfront room" fill className="object-cover transition duration-700 group-hover:scale-105" sizes="50vw" />}
+                    <span className="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-[#073B4C] backdrop-blur">Ocean escape</span>
+                  </div>
+                  <div className="flex flex-col justify-between p-6"><div><p className="text-xs font-bold uppercase tracking-[.18em] text-[#F47C5C]">Room {room.room_number}</p><h3 className="mt-2 font-display text-3xl text-[#073B4C]">{room.room_type}</h3><p className="mt-3 text-sm leading-6 text-[#6c8188]">A calm, comfortable base for beach days and slow mornings.</p></div><div className="mt-8 flex items-end justify-between"><p className="text-xl font-bold text-[#073B4C]">₦{room.price_per_night.toLocaleString()}<span className="text-xs font-normal text-[#6c8188]"> / night</span></p><ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" /></div></div>
+                </Link>
               ))}
             </div>
-          )}
-          <div className="text-center mt-12">
-            <Link href="/rooms" className="inline-flex items-center gap-2 text-[#0A3D62] font-semibold hover:text-[#F97316] transition-colors">
-              View All Rooms <ArrowRight className="w-5 h-5" />
-            </Link>
-          </div>
+          ) : <div className="mt-12 rounded-3xl bg-white p-12 text-center text-[#52717b]">Our rooms are being prepared for your next escape. Please check back shortly.</div>}
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-20 bg-gradient-to-r from-[#0A3D62] to-[#F97316]">
-        <div className="max-w-4xl mx-auto px-4 text-center text-white">
-          <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: 'var(--font-playfair)' }}>Ready for an Unforgettable Experience?</h2>
-          <p className="text-xl text-blue-100 mb-8">Book your stay today and discover why Atican Beach is the premier beachfront destination.</p>
-          <Link href="/rooms" className="bg-white text-[#0A3D62] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#F5F1E8] transition-colors inline-flex items-center gap-2">
-            Book Now <ArrowRight className="w-5 h-5" />
-          </Link>
+      <section className="relative bg-[#073B4C] px-5 py-24 text-white sm:px-8 lg:py-32">
+        <div className="absolute right-0 top-0 h-full w-1/2 opacity-15 [background:radial-gradient(circle_at_center,#51C5C1,transparent_65%)]" />
+        <div className="relative mx-auto grid max-w-7xl gap-14 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
+          <div className="relative min-h-[600px] overflow-hidden rounded-[2.5rem]"><Image src="/images/banner2.jpeg" alt="A relaxing day at Atican Beach" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 45vw" /><div className="absolute inset-0 bg-gradient-to-t from-[#073B4C]/60 to-transparent" /><div className="absolute bottom-7 left-7 right-7 flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-lg"><Sparkles className="h-5 w-5 text-[#E8B44F]" /><p className="text-sm">Every hour feels a little longer by the ocean.</p></div></div>
+          <div><p className="text-xs font-bold uppercase tracking-[.24em] text-[#51C5C1]">From sunrise to starlight</p><h2 className="mt-4 font-display text-4xl sm:text-5xl">One beautiful day.<br />A lifetime of stories.</h2><div className="mt-10 space-y-7">{dayPlan.map((item) => <div key={item.time} className="grid grid-cols-[64px_1fr] gap-4 border-b border-white/10 pb-7"><p className="flex items-center gap-1 text-sm font-bold text-[#E8B44F]"><Clock3 className="h-3.5 w-3.5" />{item.time}</p><div><h3 className="font-display text-xl">{item.title}</h3><p className="mt-2 text-sm leading-6 text-white/60">{item.copy}</p></div></div>)}</div><Link href="/experiences" className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#F47C5C] px-6 py-3 text-sm font-bold">Plan your beach day <ArrowRight className="h-4 w-4" /></Link></div>
         </div>
       </section>
+
+      <section className="px-5 py-24 sm:px-8 lg:py-32">
+        <div className="mx-auto max-w-6xl text-center"><div className="flex justify-center gap-1 text-[#E8B44F]">{Array.from({ length: 5 }).map((_, index) => <Star key={index} className="h-5 w-5 fill-current" />)}</div><blockquote className="mx-auto mt-8 max-w-4xl font-display text-3xl leading-snug text-[#073B4C] sm:text-5xl">“The kind of place where you arrive for the view and leave with a new favourite memory.”</blockquote><p className="mt-6 text-sm font-bold uppercase tracking-[.16em] text-[#6c8188]">The Atican feeling</p></div>
+        <div className="mx-auto mt-16 grid max-w-5xl gap-4 sm:grid-cols-3"><div className="rounded-2xl bg-[#F4E6CC]/55 p-5 text-center"><ShieldCheck className="mx-auto h-6 w-6 text-[#0F766E]" /><p className="mt-3 text-sm font-bold">Secure Paystack payment</p></div><div className="rounded-2xl bg-[#F4E6CC]/55 p-5 text-center"><MapPin className="mx-auto h-6 w-6 text-[#0F766E]" /><p className="mt-3 text-sm font-bold">Okun-Ajah, Lagos</p></div><div className="rounded-2xl bg-[#F4E6CC]/55 p-5 text-center"><Waves className="mx-auto h-6 w-6 text-[#0F766E]" /><p className="mt-3 text-sm font-bold">Oceanfront leisure</p></div></div>
+      </section>
+
+      <section className="px-5 pb-24 sm:px-8 lg:pb-32"><div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] bg-[#F47C5C] px-6 py-16 text-center text-white sm:px-12 lg:py-20"><div className="absolute -left-24 -top-24 h-64 w-64 rounded-full bg-[#E8B44F]/30 blur-3xl" /><div className="relative"><p className="text-xs font-bold uppercase tracking-[.24em] text-white/75">Your beach is waiting</p><h2 className="mx-auto mt-4 max-w-3xl font-display text-4xl sm:text-6xl">Trade the rush for waves, warmth and wonder.</h2><Link href="/rooms" className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#073B4C] px-7 py-4 text-sm font-bold shadow-xl">Book your escape <ArrowRight className="h-4 w-4" /></Link></div></div></section>
     </div>
   )
 }

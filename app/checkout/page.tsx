@@ -147,7 +147,6 @@ function CheckoutContent() {
         credentials: 'include',
         body: JSON.stringify({
           email: formData.email,
-          amount: total,
           bookingReference: bookingRef,
           callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/booking/confirmation?ref=${bookingRef}`,
         }),
@@ -159,20 +158,8 @@ function CheckoutContent() {
         throw new Error(paystackData.error || 'Payment initialization failed')
       }
 
-      // Step 4: Update booking payment status before redirecting
-      await fetch('/api/bookings/update-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          bookingReference: bookingRef,
-          paymentStatus: 'paid',
-          status: 'confirmed',
-        }),
-      })
-
-      // Step 5: Redirect to Paystack payment page
-      window.location.href = paystackData.data.authorization_url
+      // Payment status is updated only by Paystack's verified webhook.
+      window.location.assign(paystackData.data.authorization_url)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
       setLoading(false)

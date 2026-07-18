@@ -171,8 +171,10 @@ export async function saveConversation(
 }
 
 export function detectBookingIntent(message: string): boolean {
-  const bookingKeywords = ['book','reserve','reservation','stay','check in','check-in','available','vacancy','nights','room for','i want','i need','looking for','can i get','how much','price','cost','rate']
-  return bookingKeywords.some(keyword => message.toLowerCase().includes(keyword))
+  const normalized = message.toLowerCase().replace(/\s+/g, ' ').trim()
+  // Only open the reservation form for a transactional request. Availability
+  // and price questions should be answered first without interrupting the chat.
+  return /\b(book|reserve)\b|\bmake (?:a )?reservation\b|\bi (?:want|need|would like)(?: to (?:book|reserve))?\b[^?.!]*\brooms?\b|\bcan i (?:book|reserve|get)\b[^?.!]*\brooms?\b/.test(normalized)
 }
 
 export function extractBookingDetails(message: string): { roomType?: string; checkIn?: string; checkOut?: string; guests?: number } {

@@ -29,10 +29,38 @@ export async function POST(request: NextRequest) {
     const isBooking = detectBookingIntent(message)
     const bookingDetails = isBooking ? extractBookingDetails(message) : null
 
-    // Booking introductions are deterministic so model reasoning can never leak
+    const isAvailabilityInquiry = /\b(?:what|which|any|show|list|check|do you have|are there)\b[^?.!]*\brooms?\b[^?.!]*\b(?:available|availability|vacan(?:t|cy|cies))\b|\b(?:available|vacant)\s+rooms?\b/i.test(message)
+
+    // Booking and availability responses are deterministic so model reasoning can never leak
     // into a revenue-critical guest flow. The structured form handles the rest.
     let reply: string
-    if (isBooking && bookingDetails?.roomType) {
+    if (isAvailabilityInquiry) {
+      const { data: availableRooms } = await supabase
+        .from('rooms')
+        .select('room_type, price_per_night')
+        .eq('is_active', true)
+        .eq('status', 'available')
+        .order('price_per_night', { ascending: true })
+
+      const roomTypes = new Map<string, { count: number; price: number }>()
+      for (const room of availableRooms || []) {
+        const type = String(room.room_type || 'Room')
+        const price = Number(room.price_per_night)
+        const current = roomTypes.get(type)
+        roomTypes.set(type, {
+          count: (current?.count || 0) + 1,
+          price: Number.isFinite(price) ? Math.min(current?.price ?? price, price) : current?.price || 0,
+        })
+      }
+
+      const options = [...roomTypes.entries()]
+        .sort((a, b) => a[1].price - b[1].price)
+        .map(([type, details]) => `${type}: ${details.price.toLocaleString('en-NG')} Naira per night (${details.count} available)`)
+
+      reply = options.length
+        ? `These room types are currently available:\n\n${options.join('\n')}\n\nTell me your check-in date, check-out date, and number of guests so I can confirm availability for your stay.`
+        : 'I cannot find a currently available room. Please share your preferred dates so I can help check other options.'
+    } else if (isBooking && bookingDetails?.roomType) {
       const { data: matchingRooms } = await supabase
         .from('rooms')
         .select('price_per_night')

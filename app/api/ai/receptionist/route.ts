@@ -95,8 +95,11 @@ export async function POST(request: NextRequest) {
 
 function sanitizeGuestReply(reply: string, isBooking: boolean): string {
   const cleaned = (reply || '')
-    .replace(/₦\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)/g, '$1 Naira')
-    .replace(/\bN(\d{1,3}(?:,\d{3})*(?:\.\d+)?)/g, '$1 Naira')
+    // Normalize symbol/prefix variants and consume an existing currency suffix
+    // so model output such as "₦55,000 Naira" does not become "55,000 Naira Naira".
+    .replace(/₦\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?:\s+Naira)?/gi, '$1 Naira')
+    .replace(/\bN\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?:\s+Naira)?/gi, '$1 Naira')
+    .replace(/(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s+Naira(?:\s+Naira)+/gi, '$1 Naira')
     .replace(/\*\*/g, '')
     .replace(/\*/g, '')
     .replace(/^#{1,6}\s/gm, '')

@@ -7,6 +7,15 @@ interface ResponseContext {
   conversationHistory?: Array<{ type: string; text: string }>
 }
 
+function timeBasedGreeting(date = new Date()): string {
+  const lagosHour = Number(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Lagos',
+    hour: '2-digit',
+    hour12: false,
+  }).format(date))
+  return lagosHour < 12 ? 'Good morning' : lagosHour < 17 ? 'Good afternoon' : 'Good evening'
+}
+
 const roomInfo: Record<string, { price: string; occupancy: string; amenities: string }> = {
   'Standard': { price: '₦55,000', occupancy: '2 guests', amenities: 'AC, TV, WiFi' },
   'Deluxe': { price: '₦65,000', occupancy: '2 guests', amenities: 'AC, TV, WiFi, Mini Bar' },
@@ -82,6 +91,14 @@ function matchKeywords(message: string): string[] {
 export function generateResponse(message: string, context?: ResponseContext): string {
   const keywords = matchKeywords(message)
   const lower = message.toLowerCase()
+
+  if (keywords.includes('greeting')) {
+    return `${timeBasedGreeting()}! Welcome to Atican Beach Resort & Hotel. I’m Mafrex, your receptionist. How may I help with your stay today?`
+  }
+
+  if (keywords.includes('thanks')) {
+    return 'You’re most welcome. Is there anything else I can arrange for you?'
+  }
 
   // Greeting
   if (keywords.includes('greeting')) {
@@ -355,5 +372,5 @@ export function generateResponse(message: string, context?: ResponseContext): st
 }
 
 export function getWelcomeMessage(): string {
-  return 'Welcome to Atican Beach Resort! 🌊 I\'m your AI Receptionist. I can help with room availability, pricing, tent bookings, experiences, dining, and more. You can speak or type - whatever\'s easiest! How can I assist you today?'
+  return `${timeBasedGreeting()}! Welcome to Atican Beach Resort & Hotel. I’m Mafrex, your receptionist. I can assist with rooms, tent bookings, dining, experiences, and resort information. How may I help you today?`
 }

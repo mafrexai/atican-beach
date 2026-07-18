@@ -30,13 +30,13 @@ function numberToWords(num: number): string {
 export function formatForSpeech(text: string): string {
   let formatted = text
 
-  // Replace price patterns: N55,000/night, 55,000/night, etc.
-  formatted = formatted.replace(/([N\u20A6])?\s*(\d{1,3}(?:,\d{3})+(?:\.\d+)?)\s*(?:\/\s*|\s+per\s+)?\s*(night|day|person|hour|week|month|group|ride)?/gi, (_match, currency, numStr, unit) => {
+  // Speak Nigerian prices naturally: "₦55,000" becomes
+  // "fifty-five thousand naira", never "N G N" or "naira fifty-five thousand".
+  formatted = formatted.replace(/(?:NGN|[N\u20A6])?\s*(\d{1,3}(?:,\d{3})+(?:\.\d+)?)(?:\s*Naira)?(?:\s*\/\s*|\s+per\s+)?(night|day|person|hour|week|month|group|ride)?/gi, (_match, numStr, unit) => {
     const num = parseInt(numStr.replace(/,/g, ''), 10)
     const words = numberToWords(num)
-    const currText = currency ? 'Naira ' : 'Naira '
-    const unitText = unit ? ' ' + unit : ''
-    return currText + words + unitText
+    const unitText = unit ? ' per ' + unit : ''
+    return words + ' naira' + unitText
   })
 
   // Replace standalone decimals: 2.5 guests

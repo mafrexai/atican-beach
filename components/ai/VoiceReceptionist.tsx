@@ -18,6 +18,19 @@ interface Message {
   timestamp: Date
 }
 
+function formatReceptionistDisplay(text: string): string {
+  return text
+    .replace(/₦\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?:\s+Naira)?/gi, '₦$1')
+    .replace(/\b(?:NGN|N)\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?:\s+Naira)?/gi, '₦$1')
+    .replace(/\b(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s+Naira(?:\s+Naira)*/gi, '₦$1')
+}
+
+function getReceptionistWelcome(): string {
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  return `${greeting}! Welcome to Atican Beach Resort & Hotel. I’m Mafrex, your receptionist. I can assist with rooms, tent bookings, dining, experiences, and resort information. How may I help you today?`
+}
+
 export function VoiceReceptionist() {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
@@ -88,7 +101,7 @@ export function VoiceReceptionist() {
         // Invalid data, start fresh
       }
     } else {
-      addMessage('ai', 'Welcome to Atican Beach Resort! 🌊 I\'m your AI Receptionist. I can help with room availability, pricing, tent bookings, experiences, dining, and more. I can speak and respond to your voice! How can I assist you today?')
+      addMessage('ai', getReceptionistWelcome())
     }
   }, [])
 
@@ -159,9 +172,9 @@ export function VoiceReceptionist() {
       })
 
       const data = await response.json()
-      let aiResponse = data.reply || 'I apologize, but I am having trouble responding. Please try again.'
+      let aiResponse = data.reply || 'I\'m sorry, I\'m unable to retrieve that information at the moment. Please try again shortly.'
       // Strip markdown asterisks for clean display
-      aiResponse = aiResponse.replace(/\*\*/g, "").replace(/\*/g, "").replace(/^#{1,6}\s/gm, "").replace(/\s{2,}/g, " ").trim()
+      aiResponse = formatReceptionistDisplay(aiResponse.replace(/\*\*/g, "").replace(/\*/g, "").replace(/^#{1,6}\s/gm, "").replace(/\s{2,}/g, " ").trim())
       addMessage('ai', aiResponse)
       if (data.isBooking && bookingStep === 'closed') {
         setBookingDraft((current) => ({
@@ -176,7 +189,7 @@ export function VoiceReceptionist() {
        const speechReady = formatForSpeech(cleanForSpeech)
        speakTextLocally(speechReady)
     } catch {
-      const errorMsg = 'I apologize, but I\'m having technical difficulties. Please try again or call our front desk at +234 800 000 0000.'
+      const errorMsg = 'I\'m sorry, I\'m unable to retrieve that information at the moment. Please try again shortly or contact our front desk on +234 902 962 2583.'
       addMessage('ai', errorMsg)
       speakTextLocally(errorMsg)
     } finally {

@@ -91,6 +91,9 @@ export async function POST(request: NextRequest) {
     }
 
     reply = sanitizeGuestReply(reply, isBooking)
+    if (Array.isArray(conversationHistory) && conversationHistory.some((entry) => entry?.type === 'ai')) {
+      reply = stripRepeatedIntroduction(reply)
+    }
 
     // Save conversation to database
     if (sessionId) {
@@ -123,11 +126,12 @@ export async function POST(request: NextRequest) {
 
 function sanitizeGuestReply(reply: string, isBooking: boolean): string {
   const cleaned = (reply || '')
-    // Normalize symbol/prefix variants and consume an existing currency suffix
-    // so model output such as "₦55,000 Naira" does not become "55,000 Naira Naira".
-    .replace(/₦\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?:\s+Naira)?/gi, '$1 Naira')
-    .replace(/\bN\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?:\s+Naira)?/gi, '$1 Naira')
-    .replace(/(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s+Naira(?:\s+Naira)+/gi, '$1 Naira')
+    // Enforce one guest-facing currency format regardless of how the model
+    // writes it. Speech formatting separately reads "₦55,000" as
+    // "fifty-five thousand naira".
+    .replace(/₦\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?:\s+Naira)?/gi, '₦$1')
+    .replace(/\b(?:NGN|N)\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?:\s+Naira)?/gi, '₦$1')
+    .replace(/(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s+Naira(?:\s+Naira)*/gi, '₦$1')
     .replace(/\*\*/g, '')
     .replace(/\*/g, '')
     .replace(/^#{1,6}\s/gm, '')
@@ -141,6 +145,13 @@ function sanitizeGuestReply(reply: string, isBooking: boolean): string {
   }
 
   return cleaned
+}
+
+function stripRepeatedIntroduction(reply: string): string {
+  return reply
+    .replace(/^(?:hello|hi|hey|good morning|good afternoon|good evening)[,!\s]*[.!?]?\s*/i, '')
+    .replace(/^(?:i am|i’m|i'm)\s+Mafrex[^.!?]*[.!?]\s*/i, '')
+    .trim()
 }
 
 export async function GET() {

@@ -122,6 +122,20 @@ export default function StaffCheckInPage() {
     }
   }
 
+  const handleVerifyPayment = async (booking: Booking) => {
+    setLoading(true); setError(''); setSuccess('')
+    try {
+      const response = await fetch('/api/paystack/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: booking.booking_reference }) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Unable to verify payment')
+      setSelectedBooking({ ...booking, payment_status: 'paid', status: 'confirmed' })
+      setSuccess(`Payment verified successfully for ${booking.booking_reference}.`)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unable to verify payment')
+    } finally { setLoading(false) }
+  }
+
   const getStatusBadge = (booking: Booking) => {
     if (booking.checked_out_at) {
       return <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Checked Out</span>
@@ -322,6 +336,12 @@ export default function StaffCheckInPage() {
 
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4 border-t border-gray-100">
+              {selectedBooking.payment_status !== 'paid' && (
+                <button onClick={() => handleVerifyPayment(selectedBooking)} disabled={loading}
+                  className="flex items-center gap-2 rounded-lg border border-[#0A3D62] px-5 py-2.5 text-sm font-medium text-[#0A3D62] disabled:opacity-50">
+                  {loading ? 'Verifying...' : 'Verify Payment'}
+                </button>
+              )}
               {!selectedBooking.checked_in_at && !selectedBooking.checked_out_at && (
                 <button
                   onClick={() => handleCheckIn(selectedBooking)}

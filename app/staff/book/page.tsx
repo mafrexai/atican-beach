@@ -110,7 +110,7 @@ export default function StaffBookPage() {
           const data = await response.json()
 
           if (data.success) {
-            setSuccess(`Payment confirmed for booking ${ref}. The verified Paystack webhook will finalize the payment status.`)
+            setSuccess(`Payment confirmed and booking ${ref} has been marked as paid.`)
             setPaymentStatus('paid')
           } else {
             throw new Error('Payment verification failed')

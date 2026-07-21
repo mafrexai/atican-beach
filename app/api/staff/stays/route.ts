@@ -7,6 +7,10 @@ const actionSchema = z.object({
   action: z.enum(['check_in', 'check_out']),
 })
 
+interface BookingRow { id: string; [key: string]: unknown }
+interface RoomItemRow { booking_id: string; item_id: string }
+interface RoomRow { id: string; room_number: string; room_type: string }
+
 export async function GET(request: NextRequest) {
   const auth = await authorizeFrontDesk(); if (!auth.ok) return auth.response
   const query = request.nextUrl.searchParams.get('query')?.trim()
@@ -20,7 +24,23 @@ export async function GET(request: NextRequest) {
     : bookingsQuery.ilike('guest_email', `%${query.replace(/[%_,()]/g, '')}%`)
   const { data, error } = await bookingsQuery
   if (error) return NextResponse.json({ error: 'Unable to search bookings right now.' }, { status: 500 })
-  return NextResponse.json({ bookings: data || [] })
+  const bookings = (data || []) as BookingRow[]
+  const bookingIds = bookings.map((booking) => booking.id)
+  if (!bookingIds.length) return NextResponse.json({ bookings: [] })
+
+  const { data: roomItems } = await auth.admin.from('booking_items')
+    .select('booking_id, item_id').in('booking_id', bookingIds).eq('item_type', 'room')
+  const typedRoomItems = (roomItems || []) as RoomItemRow[]
+  const roomIds = [...new Set(typedRoomItems.map((item) => item.item_id))]
+  const { data: rooms } = roomIds.length
+    ? await auth.admin.from('rooms').select('id, room_number, room_type').in('id', roomIds)
+    : { data: [] }
+  const roomById = new Map(((rooms || []) as RoomRow[]).map((room) => [room.id, room]))
+  const enriched = bookings.map((booking) => ({ ...booking,
+    room_details: typedRoomItems.filter((item) => item.booking_id === booking.id)
+      .map((item) => roomById.get(item.item_id)).filter(Boolean),
+  }))
+  return NextResponse.json({ bookings: enriched })
 }
 
 export async function POST(request: NextRequest) {

@@ -20,6 +20,7 @@ interface Booking {
   checked_out_at: string | null
   booking_type: string
   special_requests: string | null
+  room_details?: Array<{ id: string; room_number: string; room_type: string }>
 }
 
 export default function StaffCheckInPage() {
@@ -285,6 +286,18 @@ export default function StaffCheckInPage() {
                 <p className="text-xs text-gray-500">Check-out Date</p>
                 <p className="text-sm font-medium text-gray-900">
                   {selectedBooking.check_out_date ? format(parseISO(selectedBooking.check_out_date), 'MMM d, yyyy') : '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Room Number</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {selectedBooking.room_details?.map((room) => room.room_number).join(', ') || 'Not assigned'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Room Category</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {selectedBooking.room_details?.map((room) => room.room_type).join(', ') || 'Not assigned'}
                 </p>
               </div>
             </div>

@@ -4,6 +4,26 @@ import { format } from "date-fns"
 import Link from "next/link"
 import { CalendarPlus, LogIn, CheckCircle2, BedDouble, Check } from "lucide-react"
 
+interface Room {
+  id: string
+  room_number: string
+  room_type: string
+  price_per_night: number | null
+  status: string | null
+}
+
+interface BookingItem {
+  item_type: string
+  item_id: string
+}
+
+interface ActiveBooking {
+  guest_name: string | null
+  check_in_date: string | null
+  check_out_date: string | null
+  booking_items: BookingItem[] | null
+}
+
 export default async function StaffDashboardPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -11,15 +31,17 @@ export default async function StaffDashboardPage() {
 
   const admin = createAdminClient()
   const { data: userRole } = await admin.from("user_roles").select("role").eq("user_id", user.id).single()
-  if (userRole?.role !== "admin" && userRole?.role !== "front_desk") redirect("/staff/login")
+  if (userRole?.role !== "front_desk") redirect("/staff/login")
 
   const today = format(new Date(), "yyyy-MM-dd")
   const { data: allRooms } = await admin.from("rooms").select("*").eq("is_active", true).order("room_number")
-  const availableRooms = allRooms?.filter((r: any) => r.status === "available") || []
-  const bookedRooms = allRooms?.filter((r: any) => r.status === "booked") || []
+  const rooms = (allRooms || []) as Room[]
+  const availableRooms = rooms.filter((room) => room.status === "available")
+  const bookedRooms = rooms.filter((room) => room.status === "booked")
   const { data: arrivals } = await admin.from("bookings").select("*").eq("check_in_date", today).in("status", ["confirmed", "pending"]).is("checked_in_at", null)
   const { data: checkedIn } = await admin.from("bookings").select("*").not("checked_in_at", "is", null).is("checked_out_at", null)
   const { data: activeBookings } = await admin.from("bookings").select("*, booking_items(*)").in("status", ["confirmed", "pending"]).order("check_in_date", { ascending: true })
+  const bookings = (activeBookings || []) as ActiveBooking[]
 
   const stats = [
     { label: "Available Rooms", value: availableRooms.length, icon: Check, color: "bg-green-50 text-green-700", iconColor: "text-green-500" },
@@ -35,7 +57,7 @@ export default async function StaffDashboardPage() {
         <p className="text-gray-500 text-sm mt-1">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {stats.map((stat: any) => (
+        {stats.map((stat) => (
           <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -63,7 +85,7 @@ export default async function StaffDashboardPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900">Room Availability</h2>
-          <p className="text-sm text-gray-500">Click a room to view details</p>
+          <p className="text-sm text-gray-500">Current room status and active guest information</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -79,13 +101,13 @@ export default async function StaffDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {allRooms?.map((room: any) => {
-                const booking = activeBookings?.find((b: any) => b.booking_items?.some((i: any) => i.item_type === "room" && i.item_id === room.id))
+              {rooms.map((room) => {
+                const booking = bookings.find((item) => item.booking_items?.some((bookingItem) => bookingItem.item_type === "room" && bookingItem.item_id === room.id))
                 return (
-                  <tr key={room.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => { window.location.href = `/staff/rooms/${room.id}` }}>
+                  <tr key={room.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{room.room_number}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{room.room_type}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">N{room.price_per_night?.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">₦{room.price_per_night?.toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${room.status === "available" ? "bg-green-100 text-green-700" : room.status === "booked" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}>
                         {room.status || "available"}

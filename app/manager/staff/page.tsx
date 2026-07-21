@@ -3,6 +3,14 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Users, ArrowLeft, CheckCircle, XCircle } from "lucide-react"
 
+interface FrontDeskStaff {
+  id: string
+  staff_name: string | null
+  staff_email: string | null
+  role: string
+  is_active: boolean | null
+}
+
 export default async function ManagerStaffPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,7 +32,7 @@ export default async function ManagerStaffPage() {
   const { data: staffMembers } = await supabase
     .from("user_roles")
     .select("*")
-    .in("role", ["front_desk", "staff"])
+    .eq("role", "front_desk")
     .order("created_at", { ascending: false })
 
   return (
@@ -45,7 +53,7 @@ export default async function ManagerStaffPage() {
         </div>
         {staffMembers && staffMembers.length > 0 ? (
           <div className="divide-y divide-gray-100">
-            {staffMembers.map((staff: any) => (
+            {staffMembers.map((staff: FrontDeskStaff) => (
               <div key={staff.id} className="px-5 py-4 flex items-center justify-between hover:bg-gray-50">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[#0A3D62] rounded-full flex items-center justify-center">

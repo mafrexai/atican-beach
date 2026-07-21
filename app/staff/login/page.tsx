@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react'
 
@@ -33,14 +34,14 @@ export default function StaffLogin() {
 
       if (signInError) throw signInError
 
-      // Check staff role (front_desk or admin)
+      // The staff portal is currently restricted to front desk users.
       const { data: userRole } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', data.user.id)
         .single()
 
-      if (userRole?.role === 'front_desk' || userRole?.role === 'admin') {
+      if (userRole?.role === 'front_desk') {
         console.log('✅ Staff login successful')
         router.refresh()
         setTimeout(() => router.push('/staff/dashboard'), 300)
@@ -55,7 +56,7 @@ export default function StaffLogin() {
         .eq('id', data.user.id)
         .single()
 
-      if (profile?.role === 'front_desk' || profile?.role === 'admin') {
+      if (profile?.role === 'front_desk') {
         console.log('✅ Staff login successful (via profiles)')
         router.refresh()
         setTimeout(() => router.push('/staff/dashboard'), 300)
@@ -65,9 +66,9 @@ export default function StaffLogin() {
 
       await supabase.auth.signOut()
       throw new Error('Unauthorized: Staff access only')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Staff login error:', err)
-      setError(err.message || 'Login failed. Please check your credentials.')
+      setError(err instanceof Error ? err.message : 'Login failed. Please check your credentials.')
     } finally {
       setLoading(false)
     }
@@ -136,7 +137,7 @@ export default function StaffLogin() {
         </form>
 
         <div className="mt-6 text-center">
-          <a href="/" className="text-sm text-gray-500 hover:text-[#0A3D62] transition">&larr; Back to Atican Beach</a>
+          <Link href="/" className="text-sm text-gray-500 hover:text-[#0A3D62] transition">&larr; Back to Atican Beach</Link>
         </div>
       </div>
     </div>

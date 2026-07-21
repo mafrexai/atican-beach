@@ -22,7 +22,7 @@ export async function GET() {
   const [orders, rooms, staff] = await Promise.all([
     auth.admin.from('facility_maintenance').select('*').order('created_at', { ascending: false }).limit(250),
     auth.admin.from('rooms').select('id, room_number, room_type, status').eq('is_active', true).order('room_number'),
-    auth.admin.from('user_roles').select('user_id, staff_name, staff_email, role').in('role', ['staff', 'front_desk', 'manager']).eq('is_active', true),
+    auth.admin.from('user_roles').select('user_id, staff_name, staff_email, role').eq('role', 'front_desk').eq('is_active', true),
   ])
   if (orders.error) return NextResponse.json({ error: orders.error.message }, { status: 500 })
   return NextResponse.json({ orders: orders.data || [], rooms: rooms.data || [], staff: staff.data || [] })

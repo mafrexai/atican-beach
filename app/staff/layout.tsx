@@ -8,8 +8,6 @@ import {
   LayoutDashboard,
   CalendarPlus,
   LogIn,
-  LogOut,
-  Users,
   LogOut as LogoutIcon,
   Menu,
   X,
@@ -54,7 +52,7 @@ export default function StaffLayout({
           .eq('user_id', session.user.id)
           .single()
 
-        if (userRole?.role === 'admin' || userRole?.role === 'front_desk') {
+        if (userRole?.role === 'front_desk') {
           setUserEmail(session.user.email || '')
           setLoading(false)
           return

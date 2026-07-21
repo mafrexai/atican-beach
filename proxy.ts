@@ -26,7 +26,7 @@ async function isAdmin(supabase: ReturnType<typeof createServerClient>, userId: 
     const roleResult = await withTimeout(
       supabase.from('user_roles').select('role').eq('user_id', userId).single(),
       3000
-    ) as { data: { role: string } | null; error: any }
+    ) as { data: { role: string } | null; error: unknown }
 
     if (!roleResult.error && roleResult.data?.role === 'admin') return true
 
@@ -34,7 +34,7 @@ async function isAdmin(supabase: ReturnType<typeof createServerClient>, userId: 
     const profileResult = await withTimeout(
       supabase.from('profiles').select('role').eq('id', userId).single(),
       3000
-    ) as { data: { role: string } | null; error: any }
+    ) as { data: { role: string } | null; error: unknown }
 
     if (!profileResult.error && profileResult.data?.role === 'admin') return true
 
@@ -151,7 +151,9 @@ export async function proxy(request: NextRequest) {
 
   // Protect staff routes — require authentication
   if (isStaffRoute && !session) {
-    return NextResponse.redirect(new URL('/admin/login', request.url))
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(redirectUrl)
   }
 
   return response

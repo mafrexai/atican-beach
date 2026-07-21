@@ -1,22 +1,23 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Waves, Mail, Lock, Loader2, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // const redirectTo = searchParams.get('redirect') || '/dashboard'
-  const redirectTo = searchParams.get('redirect') || '/dashboard/my-bookings'
+  const requestedRedirect = searchParams.get('redirect')
+  const redirectTo = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//')
+    ? requestedRedirect
+    : '/dashboard/my-bookings'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,7 +26,7 @@ function LoginForm() {
 
     try {
       const supabase = createClient()
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
@@ -34,8 +35,24 @@ function LoginForm() {
         throw new Error(authError.message)
       }
 
+      const { data: assignedRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authData.user.id)
+        .maybeSingle()
+
+      let role = assignedRole?.role
+      if (!role) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user.id)
+          .maybeSingle()
+        role = profile?.role
+      }
+
       // Use window.location for full page reload to ensure session cookies are set
-      window.location.href = redirectTo
+      window.location.href = role === 'front_desk' ? '/staff/dashboard' : redirectTo
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign in')
     } finally {
@@ -115,7 +132,7 @@ function LoginForm() {
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-500">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register" className="text-[#0A3D62] font-medium hover:underline">
               Create one
             </Link>

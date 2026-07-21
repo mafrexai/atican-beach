@@ -27,11 +27,11 @@ interface ActiveBooking {
 export default async function StaffDashboardPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/staff/login")
+  if (!user) redirect("/login?redirect=/staff/dashboard")
 
   const admin = createAdminClient()
   const { data: userRole } = await admin.from("user_roles").select("role").eq("user_id", user.id).single()
-  if (userRole?.role !== "front_desk") redirect("/staff/login")
+  if (userRole?.role !== "front_desk") redirect("/login")
 
   const today = format(new Date(), "yyyy-MM-dd")
   const { data: allRooms } = await admin.from("rooms").select("*").eq("is_active", true).order("room_number")

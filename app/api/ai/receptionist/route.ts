@@ -30,11 +30,30 @@ export async function POST(request: NextRequest) {
     const bookingDetails = isBooking ? extractBookingDetails(message) : null
 
     const isAvailabilityInquiry = /\b(?:what|which|any|show|list|check|do you have|are there)\b[^?.!]*\brooms?\b[^?.!]*\b(?:available|availability|vacan(?:t|cy|cies))\b|\b(?:available|vacant)\s+rooms?\b/i.test(message)
+    const isTentPriceInquiry = /\btents?\b/i.test(message)
+      && /\b(?:cost|price|prices|pricing|rate|rates|how\s+much)\b/i.test(message)
 
     // Booking and availability responses are deterministic so model reasoning can never leak
     // into a revenue-critical guest flow. The structured form handles the rest.
     let reply: string
-    if (isAvailabilityInquiry) {
+    if (isTentPriceInquiry) {
+      const { data: availableTents } = await supabase
+        .from('tents')
+        .select('tent_name, price, quantity_available')
+        .eq('is_active', true)
+        .order('price', { ascending: true })
+
+      const options = (availableTents || []).map((tent: { tent_name: string; price: number; quantity_available: number }) => {
+        const price = Number(tent.price)
+        const formattedPrice = Number.isFinite(price) ? `₦${price.toLocaleString('en-NG')}` : 'price on request'
+        const quantity = Number(tent.quantity_available) || 0
+        return `${tent.tent_name}: ${formattedPrice} (${quantity} available)`
+      })
+
+      reply = options.length
+        ? `Our current tent options are:\n\n${options.join('\n')}\n\nWhich tent type are you considering, and what is your event date?`
+        : 'I’m sorry, I’m unable to retrieve the tent prices at the moment. Please try again shortly.'
+    } else if (isAvailabilityInquiry) {
       const { data: availableRooms } = await supabase
         .from('rooms')
         .select('room_type, price_per_night')
@@ -137,7 +156,7 @@ function sanitizeGuestReply(reply: string, isBooking: boolean): string {
     .replace(/^#{1,6}\s/gm, '')
     .trim()
 
-  const reasoningLeak = /\b(we need to respond|let(?:'s| us) (?:respond|extract|check)|should (?:respond|mention)|use exact price|system prompt|conversation history)\b/i.test(cleaned)
+  const reasoningLeak = /\b(?:we need to (?:answer|respond|extract|check|provide|use)|let(?:'s| us) (?:answer|respond|craft|extract|check)|we should (?:answer|respond|mention|use|not)|should (?:respond|mention)|the guest (?:just )?(?:asked|wants|needs)|according to (?:the )?instructions|use (?:the )?(?:exact|live|real-time) (?:price|prices|data)|system prompt|conversation history|final guest-facing answer)\b/i.test(cleaned)
   if (reasoningLeak) {
     return isBooking
       ? 'I can help you reserve that room. Please complete the secure reservation details below so I can check your dates, confirm the total, and arrange secure payment.'

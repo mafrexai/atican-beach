@@ -1,74 +1,22 @@
-﻿import { createServerSupabaseClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
-import Link from "next/link"
-import { Activity, ArrowLeft } from "lucide-react"
-import { format } from "date-fns"
+'use client'
+/* eslint-disable react-hooks/set-state-in-effect */
 
-export default async function ManagerActivityPage() {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Activity, AlertTriangle, CalendarDays, Download, Loader2, Search, UserRound } from 'lucide-react'
 
-  if (!user) {
-    redirect("/manager/login")
-  }
+interface Event { id:string; action:string; summary:string; category:string; severity:string; entityType:string|null; entityId:string|null; actorName:string; actorRole:string; details:unknown; createdAt:string }
 
-  const { data: userRole } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .single()
-
-  if (userRole?.role !== "manager") {
-    redirect("/manager/login")
-  }
-
-  const { data: logs } = await supabase
-    .from("staff_activity_logs")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(50)
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/manager/dashboard" className="text-gray-500 hover:text-gray-700">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Activity Logs</h1>
-          <p className="text-gray-500 text-sm mt-1">View staff activity and booking logs</p>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-        </div>
-        {logs && logs.length > 0 ? (
-          <div className="divide-y divide-gray-100">
-            {logs.map((log: any) => (
-              <div key={log.id} className="px-5 py-4 hover:bg-gray-50">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{log.action}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {log.details ? JSON.stringify(log.details).substring(0, 100) : "No details"}
-                    </p>
-                  </div>
-                  <span className="text-xs text-gray-400">
-                    {log.created_at ? format(new Date(log.created_at), "MMM d, yyyy HH:mm") : ""}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="p-8 text-center">
-            <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No activity logs found</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+export default function ManagerActivityPage() {
+  const [events,setEvents]=useState<Event[]>([]); const [loading,setLoading]=useState(true); const [error,setError]=useState(''); const [search,setSearch]=useState(''); const [category,setCategory]=useState('all'); const [period,setPeriod]=useState('30'); const [currentTime]=useState(()=>Date.now())
+  const load=useCallback(async()=>{ setLoading(true); const response=await fetch('/api/manager/activity',{cache:'no-store'}); const data=await response.json(); if(!response.ok)setError(data.error||'Unable to load activity.');else{setEvents(data.events);setError('')} setLoading(false)},[])
+  useEffect(()=>{void load()},[load])
+  const categories=useMemo(()=>[...new Set(events.map(e=>e.category))].sort(),[events])
+  const filtered=useMemo(()=>events.filter(event=>{const cutoff=period==='all'?0:currentTime-Number(period)*86400000; const query=search.toLowerCase(); return (!cutoff||new Date(event.createdAt).getTime()>=cutoff)&&(category==='all'||event.category===category)&&(!query||`${event.summary} ${event.actorName} ${event.action}`.toLowerCase().includes(query))}),[events,search,category,period,currentTime])
+  function exportCsv(){const rows=[['Time','Category','Severity','Action','Summary','Actor','Role'],...filtered.map(e=>[e.createdAt,e.category,e.severity,e.action,e.summary,e.actorName,e.actorRole])];const csv=rows.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const link=document.createElement('a');link.href=url;link.download=`atican-activity-${new Date().toISOString().slice(0,10)}.csv`;link.click();URL.revokeObjectURL(url)}
+  return <div className="space-y-6"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h1 className="text-2xl font-bold text-gray-900">Operational Activity</h1><p className="mt-1 text-sm text-gray-500">A unified timeline of staff, booking, payment, and maintenance actions.</p></div><button onClick={exportCsv} disabled={!filtered.length} className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 disabled:opacity-40"><Download className="h-4 w-4"/>Export CSV</button></div>
+  {error&&<div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+  <div className="grid gap-3 rounded-xl border bg-white p-4 md:grid-cols-[1fr_auto_auto]"><label className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search activity or staff" className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm"/></label><select value={category} onChange={e=>setCategory(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm"><option value="all">All categories</option>{categories.map(value=><option key={value}>{value}</option>)}</select><select value={period} onChange={e=>setPeriod(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="all">All loaded</option></select></div>
+  {loading?<div className="flex justify-center py-16"><Loader2 className="h-7 w-7 animate-spin"/></div>:<div className="overflow-hidden rounded-xl border bg-white"><div className="divide-y">{filtered.map(event=><article key={`${event.category}-${event.id}`} className="flex gap-3 p-4 hover:bg-gray-50"><div className={`mt-0.5 rounded-lg p-2 ${event.severity==='critical'?'bg-red-100 text-red-700':event.severity==='warning'?'bg-amber-100 text-amber-700':'bg-blue-50 text-blue-700'}`}>{event.severity==='critical'?<AlertTriangle className="h-4 w-4"/>:<Activity className="h-4 w-4"/>}</div><div className="min-w-0 flex-1"><div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><p className="font-semibold text-gray-900">{event.summary}</p><span className="flex items-center gap-1 text-xs text-gray-400"><CalendarDays className="h-3 w-3"/>{new Date(event.createdAt).toLocaleString('en-NG')}</span></div><div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500"><span className="rounded-full bg-gray-100 px-2 py-0.5 capitalize">{event.category}</span><span className="flex items-center gap-1"><UserRound className="h-3 w-3"/>{event.actorName} · {event.actorRole}</span>{event.entityType&&<span>{event.entityType}</span>}</div>{event.details!=null&&<details className="mt-2 text-xs text-gray-500"><summary className="cursor-pointer">View details</summary><pre className="mt-2 overflow-x-auto rounded bg-gray-50 p-2 whitespace-pre-wrap">{prettyDetails(event.details)}</pre></details>}</div></article>)}{!filtered.length&&<div className="p-12 text-center text-gray-400">No activity matches these filters.</div>}</div></div>}</div>
 }
+
+function prettyDetails(details:unknown){if(typeof details==='string')return details;try{return JSON.stringify(details,null,2)}catch{return 'Details unavailable'}}

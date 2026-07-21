@@ -1,90 +1,46 @@
-﻿import { createServerSupabaseClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
-import Link from "next/link"
-import { Wrench, ArrowLeft, CheckCircle, Clock, AlertCircle } from "lucide-react"
-import { format } from "date-fns"
+'use client'
+/* eslint-disable react-hooks/set-state-in-effect */
 
-export default async function ManagerMaintenancePage() {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, CheckCircle2, Clock3, Loader2, Plus, Search, Wrench, X } from 'lucide-react'
 
-  if (!user) {
-    redirect("/manager/login")
-  }
+interface WorkOrder { id: string; work_order_number: string; title: string; description: string; category: string; priority: string; status: string; room_id: string | null; location: string; assigned_to: string | null; due_at: string | null; resolution_notes: string | null; estimated_cost: number | null; actual_cost: number | null; created_at: string }
+interface Room { id: string; room_number: string; room_type: string; status: string }
+interface Staff { user_id: string; staff_name: string | null; staff_email: string | null; role: string }
 
-  const { data: userRole } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .single()
+const createDefaults = { title: '', description: '', category: 'other', priority: 'medium', roomId: '', location: 'Resort property', assignedTo: '', dueAt: '', estimatedCost: '' }
 
-  if (userRole?.role !== "manager") {
-    redirect("/manager/login")
-  }
+export default function ManagerMaintenancePage() {
+  const [orders, setOrders] = useState<WorkOrder[]>([]); const [rooms, setRooms] = useState<Room[]>([]); const [staff, setStaff] = useState<Staff[]>([])
+  const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [search, setSearch] = useState(''); const [status, setStatus] = useState('open')
+  const [showCreate, setShowCreate] = useState(false); const [createForm, setCreateForm] = useState(createDefaults); const [selected, setSelected] = useState<WorkOrder | null>(null); const [saving, setSaving] = useState(false)
 
-  const { data: maintenance } = await supabase
-    .from("facility_maintenance")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(50)
+  const load = useCallback(async () => { setLoading(true); const response = await fetch('/api/manager/maintenance', { cache: 'no-store' }); const data = await response.json(); if (!response.ok) setError(data.error || 'Unable to load maintenance.'); else { setOrders(data.orders); setRooms(data.rooms); setStaff(data.staff); setError('') } setLoading(false) }, [])
+  useEffect(() => { void load() }, [load])
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle className="w-4 h-4 text-green-500" />
-      case "in_progress":
-        return <Clock className="w-4 h-4 text-yellow-500" />
-      case "pending":
-      default:
-        return <AlertCircle className="w-4 h-4 text-red-500" />
-    }
-  }
+  const filtered = useMemo(() => orders.filter((order) => {
+    const matchesStatus = status === 'all' || (status === 'open' ? ['pending', 'in_progress'].includes(order.status) : order.status === status)
+    const query = search.toLowerCase(); const room = rooms.find((item) => item.id === order.room_id)
+    return matchesStatus && (!query || `${order.work_order_number} ${order.title} ${order.description} ${room?.room_number || ''}`.toLowerCase().includes(query))
+  }), [orders, rooms, search, status])
+  const stats = { open: orders.filter((o) => ['pending', 'in_progress'].includes(o.status)).length, urgent: orders.filter((o) => ['pending', 'in_progress'].includes(o.status) && o.priority === 'urgent').length, overdue: orders.filter((o) => ['pending', 'in_progress'].includes(o.status) && o.due_at && new Date(o.due_at) < new Date()).length, completed: orders.filter((o) => o.status === 'completed').length }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/manager/dashboard" className="text-gray-500 hover:text-gray-700">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Maintenance</h1>
-          <p className="text-gray-500 text-sm mt-1">View and manage facility maintenance requests</p>
-        </div>
-      </div>
+  async function createOrder(event: React.FormEvent) { event.preventDefault(); setSaving(true); setError(''); const response = await fetch('/api/manager/maintenance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...createForm, roomId: createForm.roomId || null, assignedTo: createForm.assignedTo || null, dueAt: createForm.dueAt ? new Date(createForm.dueAt).toISOString() : null, estimatedCost: createForm.estimatedCost ? Number(createForm.estimatedCost) : null }) }); const data = await response.json(); if (!response.ok) setError(data.error || 'Unable to create work order.'); else { setShowCreate(false); setCreateForm(createDefaults); await load() } setSaving(false) }
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Maintenance Requests</h2>
-        </div>
-        {maintenance && maintenance.length > 0 ? (
-          <div className="divide-y divide-gray-100">
-            {maintenance.map((item: any) => (
-              <div key={item.id} className="px-5 py-4 hover:bg-gray-50">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    {getStatusIcon(item.status)}
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{item.title || item.description?.substring(0, 50)}</p>
-                      <p className="text-xs text-gray-500 mt-1">{item.description}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Location: {item.location || "N/A"} | Priority: {item.priority || "Normal"}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-400">
-                    {item.created_at ? format(new Date(item.created_at), "MMM d, yyyy") : ""}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="p-8 text-center">
-            <Wrench className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No maintenance requests found</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+  async function updateOrder(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); if (!selected) return; setSaving(true); setError(''); const values = new FormData(event.currentTarget); const response = await fetch('/api/manager/maintenance', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: selected.id, status: values.get('status'), priority: values.get('priority'), assignedTo: values.get('assignedTo') || null, dueAt: values.get('dueAt') ? new Date(String(values.get('dueAt'))).toISOString() : null, resolutionNotes: values.get('resolutionNotes') || null, estimatedCost: values.get('estimatedCost') ? Number(values.get('estimatedCost')) : null, actualCost: values.get('actualCost') ? Number(values.get('actualCost')) : null }) }); const data = await response.json(); if (!response.ok) setError(data.error || 'Unable to update work order.'); else { setSelected(null); await load() } setSaving(false) }
+
+  return <div className="space-y-6">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h1 className="text-2xl font-bold text-gray-900">Maintenance Operations</h1><p className="mt-1 text-sm text-gray-500">Manage work orders, assignments, deadlines, room downtime, and resolution costs.</p></div><button onClick={() => setShowCreate(true)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F97316] px-4 py-2.5 text-sm font-semibold text-white"><Plus className="h-4 w-4" />New work order</button></div>
+    {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[{ label: 'Open', value: stats.open, icon: Wrench, color: 'text-blue-600' }, { label: 'Urgent', value: stats.urgent, icon: AlertTriangle, color: 'text-red-600' }, { label: 'Overdue', value: stats.overdue, icon: Clock3, color: 'text-amber-600' }, { label: 'Completed', value: stats.completed, icon: CheckCircle2, color: 'text-green-600' }].map((item) => <div key={item.label} className="rounded-xl border bg-white p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-gray-500">{item.label}</p><p className="mt-1 text-2xl font-bold text-gray-900">{item.value}</p></div><item.icon className={`h-6 w-6 ${item.color}`} /></div></div>)}</div>
+    <div className="flex flex-col gap-3 rounded-xl border bg-white p-4 sm:flex-row"><label className="relative flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search work orders or rooms" className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm" /></label><select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm"><option value="open">Open work</option><option value="pending">Pending</option><option value="in_progress">In progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="all">All statuses</option></select></div>
+    {loading ? <div className="flex justify-center py-16"><Loader2 className="h-7 w-7 animate-spin" /></div> : <div className="overflow-hidden rounded-xl border bg-white"><div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="bg-gray-50 text-xs uppercase text-gray-500"><tr><th className="px-4 py-3">Work order</th><th className="px-4 py-3">Location</th><th className="px-4 py-3">Priority</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Assigned</th><th className="px-4 py-3">Due</th></tr></thead><tbody className="divide-y">{filtered.map((order) => { const room = rooms.find((r) => r.id === order.room_id); const assignee = staff.find((s) => s.user_id === order.assigned_to); const overdue = order.due_at && new Date(order.due_at) < new Date() && !['completed', 'cancelled'].includes(order.status); return <tr key={order.id} onClick={() => setSelected(order)} className="cursor-pointer hover:bg-gray-50"><td className="px-4 py-3"><p className="font-semibold text-gray-900">{order.title}</p><p className="text-xs text-gray-400">{order.work_order_number} · {order.category.replace(/_/g, ' ')}</p></td><td className="px-4 py-3">{room ? `Room ${room.room_number}` : order.location}</td><td className="px-4 py-3"><Badge value={order.priority} /></td><td className="px-4 py-3"><Badge value={order.status} /></td><td className="px-4 py-3 text-gray-600">{assignee?.staff_name || assignee?.staff_email || 'Unassigned'}</td><td className={`px-4 py-3 ${overdue ? 'font-semibold text-red-600' : 'text-gray-500'}`}>{order.due_at ? new Date(order.due_at).toLocaleDateString('en-NG') : 'Not set'}</td></tr> })}{filtered.length === 0 && <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">No work orders match these filters.</td></tr>}</tbody></table></div></div>}
+    {showCreate && <Modal title="Create work order" close={() => setShowCreate(false)}><form onSubmit={createOrder} className="grid gap-4 sm:grid-cols-2"><Field label="Title" className="sm:col-span-2"><input required value={createForm.title} onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })} className="input" /></Field><Field label="Description" className="sm:col-span-2"><textarea required rows={3} value={createForm.description} onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })} className="input" /></Field><Field label="Category"><select value={createForm.category} onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })} className="input">{['electrical','plumbing','air_conditioning','housekeeping','furniture','safety','it','other'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}</select></Field><Field label="Priority"><select value={createForm.priority} onChange={(e) => setCreateForm({ ...createForm, priority: e.target.value })} className="input">{['low','medium','high','urgent'].map(v => <option key={v}>{v}</option>)}</select></Field><Field label="Room (optional)"><select value={createForm.roomId} onChange={(e) => setCreateForm({ ...createForm, roomId: e.target.value, location: e.target.value ? 'Guest room' : createForm.location })} className="input"><option value="">General property</option>{rooms.map(r => <option key={r.id} value={r.id}>Room {r.room_number} — {r.room_type}</option>)}</select></Field><Field label="Location"><input required value={createForm.location} onChange={(e) => setCreateForm({ ...createForm, location: e.target.value })} className="input" /></Field><Field label="Assign to"><select value={createForm.assignedTo} onChange={(e) => setCreateForm({ ...createForm, assignedTo: e.target.value })} className="input"><option value="">Unassigned</option>{staff.map(s => <option key={s.user_id} value={s.user_id}>{s.staff_name || s.staff_email}</option>)}</select></Field><Field label="Due date"><input type="datetime-local" value={createForm.dueAt} onChange={(e) => setCreateForm({ ...createForm, dueAt: e.target.value })} className="input" /></Field><Field label="Estimated cost"><input type="number" min="0" value={createForm.estimatedCost} onChange={(e) => setCreateForm({ ...createForm, estimatedCost: e.target.value })} className="input" /></Field><div className="sm:col-span-2 flex justify-end gap-2"><button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button><button disabled={saving} className="btn-primary">{saving ? 'Creating…' : 'Create work order'}</button></div></form></Modal>}
+    {selected && <Modal title={`${selected.work_order_number} · ${selected.title}`} close={() => setSelected(null)}><p className="mb-5 text-sm leading-6 text-gray-600">{selected.description}</p><form onSubmit={updateOrder} className="grid gap-4 sm:grid-cols-2"><Field label="Status"><select name="status" defaultValue={selected.status} className="input">{['pending','in_progress','completed','cancelled'].map(v => <option key={v} value={v}>{v.replace(/_/g,' ')}</option>)}</select></Field><Field label="Priority"><select name="priority" defaultValue={selected.priority} className="input">{['low','medium','high','urgent'].map(v => <option key={v}>{v}</option>)}</select></Field><Field label="Assigned to"><select name="assignedTo" defaultValue={selected.assigned_to || ''} className="input"><option value="">Unassigned</option>{staff.map(s => <option key={s.user_id} value={s.user_id}>{s.staff_name || s.staff_email}</option>)}</select></Field><Field label="Due date"><input name="dueAt" type="datetime-local" defaultValue={localDateTime(selected.due_at)} className="input" /></Field><Field label="Estimated cost"><input name="estimatedCost" type="number" min="0" defaultValue={selected.estimated_cost ?? ''} className="input" /></Field><Field label="Actual cost"><input name="actualCost" type="number" min="0" defaultValue={selected.actual_cost ?? ''} className="input" /></Field><Field label="Resolution notes" className="sm:col-span-2"><textarea name="resolutionNotes" rows={4} defaultValue={selected.resolution_notes || ''} className="input" placeholder="Required when completing the work order" /></Field><div className="sm:col-span-2 flex justify-end gap-2"><button type="button" onClick={() => setSelected(null)} className="btn-secondary">Cancel</button><button disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save changes'}</button></div></form></Modal>}
+  </div>
 }
+
+function Badge({ value }: { value: string }) { const colors: Record<string,string> = { urgent:'bg-red-100 text-red-700', high:'bg-orange-100 text-orange-700', medium:'bg-yellow-100 text-yellow-700', low:'bg-gray-100 text-gray-600', pending:'bg-blue-100 text-blue-700', in_progress:'bg-amber-100 text-amber-700', completed:'bg-green-100 text-green-700', cancelled:'bg-gray-100 text-gray-500' }; return <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${colors[value] || colors.low}`}>{value.replace(/_/g,' ')}</span> }
+function Modal({ title, close, children }: { title:string; close:()=>void; children:React.ReactNode }) { return <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"><div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6"><div className="mb-5 flex items-center justify-between"><h2 className="text-lg font-bold text-gray-900">{title}</h2><button onClick={close} className="rounded p-1 text-gray-400 hover:bg-gray-100"><X className="h-5 w-5" /></button></div>{children}</div></div> }
+function Field({ label, className='', children }: { label:string; className?:string; children:React.ReactNode }) { return <label className={`text-sm font-medium text-gray-700 ${className}`}>{label}{children}</label> }
+function localDateTime(value:string|null) { if(!value) return ''; const d=new Date(value); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16) }

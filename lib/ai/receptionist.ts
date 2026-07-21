@@ -75,6 +75,13 @@ async function getOpenRouterResponse(
   // Keep enough recent context to remember guest details and booking progress.
   const history = (context.conversationHistory || []).slice(-10)
   const historyStr = history.map(m => (m.type === 'guest' ? 'Guest' : 'Mafrex') + ': ' + m.text).join('\n')
+  const normalizedMessage = message.toLowerCase()
+  const normalizedHistory = historyStr.toLowerCase()
+  const isTentConversation = /\btents?\b/.test(normalizedMessage)
+    || (/\b(?:vip|vvip|space|standard)\b/.test(normalizedMessage) && /\btents?\b/.test(normalizedHistory))
+  const reservationGuidance = isTentConversation
+    ? 'ACTIVE BOOKING CONTEXT: This is a tent or event enquiry. Tent prices are for the tent/event reservation unless official live data explicitly states another unit. Never describe a tent price as per night and never ask for hotel check-in, check-out, or number of nights. Ask only for missing event details such as the event date, tent type, quantity, expected guest count, and any setup requirements. Do not open or refer to the room reservation flow.'
+    : 'ACTIVE BOOKING CONTEXT: Apply hotel check-in, check-out, nights, and room-reservation language only when the guest is discussing accommodation or a room.'
   const lagosHour = Number(new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Africa/Lagos',
     hour: '2-digit',
@@ -102,6 +109,7 @@ async function getOpenRouterResponse(
     message,
     '',
     '## INSTRUCTIONS',
+    reservationGuidance,
     '1. Answer the guest accurately using the LIVE data and official knowledge above',
     '2. When asked about prices, use the EXACT prices from the real-time data',
     '3. When asked about availability, reference the real inventory counts',

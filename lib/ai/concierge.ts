@@ -1,143 +1,161 @@
-﻿// Enhanced AI Concierge - OpenRouter-powered personalized recommendations
-import { formatForSpeech } from '../formatSpeech'
+import 'server-only'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-const openrouterUrl = 'https://openrouter.ai/api/v1/chat/completions'
+export type ConciergeTargetType = 'room' | 'experience' | 'tent' | 'event_space'
 
 export interface ConciergeRecommendation {
-  type: 'upgrade' | 'experience' | 'dining' | 'event' | 'bundle'
+  id: string
+  source: 'manager_offer' | 'catalog_recommendation'
+  type: ConciergeTargetType
   title: string
   description: string
+  itemName: string
+  originalPrice: number
+  offerPrice: number
   ctaText: string
   ctaLink: string
   priority: number
+  expiresAt: string | null
 }
 
-export async function getConciergeRecommendations(
-  context: {
-    currentPage?: string
-    cartItems?: string[]
-    hasRoom?: boolean
-    hasStandardRoom?: boolean
-    hasExperience?: boolean
-    userBookings?: number
-  },
-  supabaseClient?: any
-): Promise<ConciergeRecommendation[]> {
-  const apiKey = process.env.OPENROUTER_API_KEY || ''
-  const recommendations: ConciergeRecommendation[] = []
+interface RecommendationContext {
+  currentPage: string
+  cartItemTypes: string[]
+}
 
-  // 1. Room upgrade suggestions based on cart
-  if (context.hasStandardRoom) {
-    recommendations.push({
-      type: 'upgrade',
-      title: 'Upgrade to Deluxe Room',
-      description: 'For just N10,000 more per night, enjoy Mini Bar and premium ocean views in our Deluxe Room.',
-      ctaText: 'View Deluxe Rooms',
-      ctaLink: '/rooms?type=Deluxe',
-      priority: 10,
-    })
-  }
+interface CatalogItem {
+  id: string
+  type: ConciergeTargetType
+  name: string
+  description: string
+  price: number
+  ctaLink: string
+}
 
-  if (context.hasRoom && !context.hasExperience) {
-    recommendations.push({
-      type: 'experience',
-      title: 'Add a Bonfire Night',
-      description: 'Make your stay unforgettable with our beach bonfire experience. N30,000 per group.',
-      ctaText: 'View Experiences',
-      ctaLink: '/experiences',
-      priority: 8,
-    })
-  }
+interface OfferRow {
+  id: string
+  title: string
+  description: string
+  target_type: ConciergeTargetType
+  target_id: string
+  offer_price: number | string | null
+  cta_text: string
+  audience_page: string
+  priority: number
+  starts_at: string | null
+  ends_at: string | null
+}
 
-  // 2. Page-based suggestions
-  if (context.currentPage === '/experiences') {
-    recommendations.push({
-      type: 'bundle',
-      title: 'Experience Bundle Deal',
-      description: 'Book Bonfire + Sack Race + Beach Ball for N40,000 (save N5,000).',
-      ctaText: 'Add Bundle',
-      ctaLink: '/experiences',
-      priority: 9,
-    })
-  }
+export async function getConciergeRecommendation(
+  context: RecommendationContext,
+  supabase: SupabaseClient
+): Promise<ConciergeRecommendation | null> {
+  const catalog = await loadCatalog(supabase)
+  if (!catalog.length) return null
 
-  if (context.currentPage === '/rooms') {
-    recommendations.push({
-      type: 'upgrade',
-      title: 'Presidential Suite Special',
-      description: 'Experience 7-star luxury with private pool, butler, and ocean views. N500,000/night.',
-      ctaText: 'View Suite',
-      ctaLink: '/rooms?type=Presidential+Suite',
-      priority: 7,
-    })
-  }
+  const now = new Date().toISOString()
+  const pageAudience = audienceForPath(context.currentPage)
+  const { data: offers } = await supabase
+    .from('concierge_offers')
+    .select('id, title, description, target_type, target_id, offer_price, cta_text, audience_page, priority, starts_at, ends_at')
+    .eq('is_active', true)
+    .or(`starts_at.is.null,starts_at.lte.${now}`)
+    .or(`ends_at.is.null,ends_at.gt.${now}`)
+    .order('priority', { ascending: false })
 
-  if (context.currentPage === '/dining') {
-    recommendations.push({
-      type: 'dining',
-      title: 'Sunset Dinner Package',
-      description: 'Book our romantic sunset dinner for two. A perfect end to your beach day.',
-      ctaText: 'Reserve Table',
-      ctaLink: '/dining',
-      priority: 8,
-    })
-  }
+  for (const offer of (offers || []) as OfferRow[]) {
+    if (offer.audience_page !== 'any' && offer.audience_page !== pageAudience) continue
+    const item = catalog.find((candidate) => candidate.type === offer.target_type && candidate.id === offer.target_id)
+    if (!item) continue
+    const offerPrice = offer.offer_price === null ? item.price : Number(offer.offer_price)
+    if (!Number.isFinite(offerPrice) || offerPrice < 0 || offerPrice > item.price) continue
 
-  // 3. OpenRouter-powered personalized recommendations
-  if (apiKey && supabaseClient && context.userBookings !== undefined) {
-    try {
-      const geminiRecs = await getOpenRouterRecommendations(context, supabaseClient, apiKey)
-      recommendations.push(...geminiRecs)
-    } catch (error) {
-      console.error('[Concierge AI] OpenRouter error:', error)
+    return {
+      id: offer.id,
+      source: 'manager_offer',
+      type: item.type,
+      title: offer.title,
+      description: offer.description,
+      itemName: item.name,
+      originalPrice: item.price,
+      offerPrice,
+      ctaText: offer.cta_text,
+      ctaLink: item.ctaLink,
+      priority: offer.priority,
+      expiresAt: offer.ends_at,
     }
   }
 
-  // Sort by priority (highest first) and return top 3
-  return recommendations.sort((a, b) => b.priority - a.priority).slice(0, 3)
+  const fallback = chooseFallback(catalog, context)
+  if (!fallback) return null
+  return {
+    id: `catalog-${fallback.type}-${fallback.id}`,
+    source: 'catalog_recommendation',
+    type: fallback.type,
+    title: fallbackTitle(fallback.type),
+    description: fallback.description || `Discover ${fallback.name} during your visit to Atican Beach Resort & Hotel.`,
+    itemName: fallback.name,
+    originalPrice: fallback.price,
+    offerPrice: fallback.price,
+    ctaText: `View ${labelForType(fallback.type)}`,
+    ctaLink: fallback.ctaLink,
+    priority: 1,
+    expiresAt: null,
+  }
 }
 
-async function getOpenRouterRecommendations(
-  context: any,
-  supabaseClient: any,
-  apiKey: string
-): Promise<ConciergeRecommendation[]> {
-   const model = 'nvidia/nemotron-3-super-120b-a12b:free'
+async function loadCatalog(supabase: SupabaseClient): Promise<CatalogItem[]> {
+  const [roomsResult, experiencesResult, tentsResult, eventsResult] = await Promise.all([
+    supabase.from('rooms').select('id, room_type, price_per_night').eq('is_active', true).eq('status', 'available'),
+    supabase.from('experiences').select('id, name, description, price').eq('is_active', true),
+    supabase.from('tents').select('id, tent_name, price, quantity_available').eq('is_active', true).gt('quantity_available', 0),
+    supabase.from('event_spaces').select('id, space_name, description, price').eq('is_active', true),
+  ])
 
-   const response = await fetch(openrouterUrl, {
-     method: 'POST',
-     headers: {
-       'Authorization': 'Bearer ' + apiKey,
-       'Content-Type': 'application/json',
-       'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://aticanbeach.com',
-       'X-Title': 'Atican Beach AI Concierge',
-     },
-     body: JSON.stringify({
-       model,
-       messages: [
-         {
-           role: 'system',
-           content: 'You are the AI Concierge for Atican Beach Resort. Return ONLY a raw JSON array, no markdown, no code fences. Each item: {type, title, description, ctaText, ctaLink, priority}. Types: upgrade, experience, dining, event, bundle. Max 80 words per description. Use N for Naira. Priority 1-10.'
-         },
-         {
-           role: 'user',
-           content: 'Guest context: ' + JSON.stringify(context) + '. Suggest 1-2 personalized upsell recommendations.'
-         }
-       ],
-       temperature: 0.7,
-       max_tokens: 300,
-     }),
-   })
-
-  if (!response.ok) return []
-  const data = await response.json()
-  const text = data.choices?.[0]?.message?.content || ''
-
-  try {
-    const jsonMatch = text.match(/\[[\s\S]*\]/)
-    if (jsonMatch) return JSON.parse(jsonMatch[0])
-  } catch {
-    // Invalid JSON from OpenRouter, skip
+  const rooms: CatalogItem[] = []
+  const seenRoomTypes = new Set<string>()
+  for (const room of roomsResult.data || []) {
+    if (seenRoomTypes.has(room.room_type)) continue
+    seenRoomTypes.add(room.room_type)
+    rooms.push({ id: room.id, type: 'room', name: `${room.room_type} Room`, description: `Enjoy a comfortable ${room.room_type} stay by the beach.`, price: Number(room.price_per_night), ctaLink: `/rooms/${room.id}` })
   }
-  return []
+
+  return [
+    ...rooms,
+    ...(experiencesResult.data || []).map((item: { id: string; name: string; description: string | null; price: number }) => ({ id: item.id, type: 'experience' as const, name: item.name, description: item.description || '', price: Number(item.price), ctaLink: '/experiences' })),
+    ...(tentsResult.data || []).map((item: { id: string; tent_name: string; price: number; quantity_available: number }) => ({ id: item.id, type: 'tent' as const, name: item.tent_name, description: `A verified event tent option with ${item.quantity_available} currently available.`, price: Number(item.price), ctaLink: '/tents' })),
+    ...(eventsResult.data || []).map((item: { id: string; space_name: string; description: string | null; price: number }) => ({ id: item.id, type: 'event_space' as const, name: item.space_name, description: item.description || '', price: Number(item.price), ctaLink: '/events' })),
+  ].filter((item) => Number.isFinite(item.price) && item.price >= 0)
+}
+
+function chooseFallback(catalog: CatalogItem[], context: RecommendationContext): CatalogItem | null {
+  const preferredType: ConciergeTargetType = context.currentPage.startsWith('/rooms')
+    ? 'experience'
+    : context.currentPage.startsWith('/experiences')
+      ? 'room'
+      : context.currentPage.startsWith('/tents') || context.currentPage.startsWith('/events')
+        ? 'event_space'
+        : context.cartItemTypes.includes('room')
+          ? 'experience'
+          : 'room'
+  return catalog.filter((item) => item.type === preferredType).sort((a, b) => a.price - b.price)[0]
+    || catalog.sort((a, b) => a.price - b.price)[0]
+    || null
+}
+
+function audienceForPath(path: string): string {
+  if (path.startsWith('/rooms')) return 'rooms'
+  if (path.startsWith('/experiences')) return 'experiences'
+  if (path.startsWith('/tents')) return 'tents'
+  if (path.startsWith('/events')) return 'events'
+  if (path.startsWith('/checkout')) return 'checkout'
+  return 'any'
+}
+
+function fallbackTitle(type: ConciergeTargetType): string {
+  return type === 'room' ? 'A room you may enjoy' : type === 'experience' ? 'Complete your stay' : type === 'tent' ? 'Plan your beach event' : 'An event space to consider'
+}
+
+function labelForType(type: ConciergeTargetType): string {
+  return type === 'event_space' ? 'event space' : type
 }

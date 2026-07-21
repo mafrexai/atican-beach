@@ -15,6 +15,7 @@ import {
   X,
   BarChart3,
   Wrench,
+  BadgePercent,
 } from "lucide-react"
 
 const managerNavItems = [
@@ -24,6 +25,7 @@ const managerNavItems = [
   { name: "Activity Logs", href: "/manager/activity", icon: Activity },
   { name: "Analytics", href: "/manager/analytics", icon: BarChart3 },
   { name: "Maintenance", href: "/manager/maintenance", icon: Wrench },
+  { name: "Concierge Offers", href: "/manager/offers", icon: BadgePercent },
 ]
 
 export default function ManagerLayout({

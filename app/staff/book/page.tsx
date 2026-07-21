@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { format, addDays, differenceInDays } from 'date-fns'
-import { CalendarDays, User, Mail, Phone, BedDouble, Tent, Sparkles, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { CalendarDays, User, Mail, Phone, BedDouble, Tent, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react'
 
 interface Room {
   id: string
@@ -43,7 +42,6 @@ interface SelectedItem {
 
 export default function StaffBookPage() {
   const router = useRouter()
-  const supabase = createClient()
 
   // Form state
   const [guestName, setGuestName] = useState('')
@@ -68,7 +66,6 @@ export default function StaffBookPage() {
 
   // Payment state
   const [paymentStatus, setPaymentStatus] = useState<'unpaid' | 'processing' | 'paid'>('unpaid');
-  const [paymentReference, setPaymentReference] = useState('');
 
   // Calculate number of nights for room pricing
   const numberOfNights = Math.max(1, differenceInDays(new Date(checkOutDate), new Date(checkInDate)))
@@ -77,15 +74,12 @@ export default function StaffBookPage() {
   useEffect(() => {
     async function fetchItems() {
       try {
-        const [roomsRes, tentsRes, experiencesRes] = await Promise.all([
-          supabase.from('rooms').select('*').eq('is_active', true).order('room_number'),
-          supabase.from('tents').select('*').eq('is_active', true).order('tent_name'),
-          supabase.from('experiences').select('*').eq('is_active', true).order('name'),
-        ])
-
-        if (roomsRes.data) setRooms(roomsRes.data)
-        if (tentsRes.data) setTents(tentsRes.data)
-        if (experiencesRes.data) setExperiences(experiencesRes.data)
+        const response = await fetch('/api/staff/bookings', { cache: 'no-store' })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Failed to load booking inventory')
+        setRooms(data.rooms || [])
+        setTents(data.tents || [])
+        setExperiences(data.experiences || [])
       } catch (err) {
         console.error('Error fetching items:', err)
         setError('Failed to load available items')
@@ -95,7 +89,7 @@ export default function StaffBookPage() {
     }
 
     fetchItems()
-  }, [supabase])
+  }, [])
 
   // Handle Paystack payment callback
   useEffect(() => {
@@ -116,25 +110,12 @@ export default function StaffBookPage() {
           const data = await response.json()
 
           if (data.success) {
-            // Update booking payment status
-            const { error: updateError } = await supabase
-              .from('bookings')
-              .update({
-                payment_status: 'paid',
-                status: 'confirmed',
-                payment_reference: ref,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('booking_reference', ref)
-
-            if (updateError) throw updateError
-
-            setSuccess(`Payment confirmed! Booking ${ref} has been paid.`)
+            setSuccess(`Payment confirmed for booking ${ref}. The verified Paystack webhook will finalize the payment status.`)
             setPaymentStatus('paid')
           } else {
             throw new Error('Payment verification failed')
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error('Payment verification error:', err)
           setError('Payment verification failed. Please contact support.')
         } finally {
@@ -145,7 +126,7 @@ export default function StaffBookPage() {
       }
       verifyPayment()
     }
-  }, [supabase])
+  }, [])
 
   const addItem = (itemType: ItemType, item: Room | Tent | Experience) => {
     const exists = selectedItems.find((i) => i.itemType === itemType && i.itemId === item.id)
@@ -191,16 +172,6 @@ export default function StaffBookPage() {
     return sum + itemTotal
   }, 0)
 
-  const generateReference = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    let result = 'AB-'
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    return result
-  }
-
-  
   // Initialize Paystack payment
   const handlePayment = async () => {
     if (!guestEmail) {
@@ -214,68 +185,8 @@ export default function StaffBookPage() {
     setPaymentStatus('processing');
     setError('');
     try {
-      // Generate reference first so we can create the booking with it
-      const bookingReference = generateReference();
-      
-      // Create booking with pending status first
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        setPaymentStatus('unpaid');
-        return;
-      }
-
-      const confirmationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-      const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          booking_reference: bookingReference,
-          confirmation_code: confirmationCode,
-          user_id: session.user.id,
-          guest_name: guestName,
-          guest_email: guestEmail,
-          guest_phone: guestPhone || null,
-          total_amount: totalAmount,
-          status: 'pending',
-          payment_status: 'unpaid',
-          check_in_date: checkInDate,
-          check_out_date: checkOutDate,
-          special_requests: specialRequests || null,
-          created_by: session.user.id,
-          booking_type: 'walk_in',
-        })
-        .select()
-        .single();
-
-      if (bookingError) throw bookingError;
-
-      // Create booking items
-      const bookingItems = selectedItems.map((item) => ({
-        booking_id: booking.id,
-        item_type: item.itemType,
-        item_id: item.itemId,
-        quantity: item.quantity,
-        price_at_booking: item.price,
-        start_date: checkInDate,
-        end_date: checkOutDate,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('booking_items')
-        .insert(bookingItems);
-
-      if (itemsError) throw itemsError;
-
-      // Log activity
-      await supabase
-        .from('booking_activity_log')
-        .insert({
-          booking_id: booking.id,
-          user_id: session.user.id,
-          action: 'walk_in_booking_created',
-          details: { total_amount: totalAmount, items: selectedItems.length },
-        });
+      const booking = await createBooking('unpaid', false)
+      const bookingReference = booking.reference
 
       // Initialize Paystack payment
       const response = await fetch('/api/paystack/initialize', {
@@ -283,11 +194,11 @@ export default function StaffBookPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: guestEmail,
-          amount: totalAmount,
+          amount: booking.total_amount,
           bookingReference: bookingReference,
           callbackUrl: `${window.location.origin}/staff/book?payment=success&ref=${bookingReference}`,
           metadata: { 
-            booking_id: booking.id,
+            booking_id: booking.booking_id,
             guest_name: guestName, 
             check_in: checkInDate, 
             check_out: checkOutDate 
@@ -298,81 +209,41 @@ export default function StaffBookPage() {
       if (data.success && data.data?.authorization_url) {
         // Store booking info for redirect handling
         sessionStorage.setItem('pendingBookingRef', bookingReference);
-        window.location.href = data.data.authorization_url;
+        window.location.assign(data.data.authorization_url);
       } else {
         throw new Error(data.error || 'Failed to initialize payment');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Payment error:', err);
-      setError(err.message || 'Payment failed. Please try again.');
+      setError(err instanceof Error ? err.message : 'Payment failed. Please try again.');
       setPaymentStatus('unpaid');
     }
   };
 
-  const markAsPaid = async () => {
-    if (!paymentReference) { setError('Please enter the payment reference'); return; }
-    setLoading(true);
-    try {
-      await createBooking('paid');
-      setPaymentStatus('paid');
-    } catch (err: any) {
-      console.error('Error marking as paid:', err);
-      setError(err.message || 'Failed to update payment status');
-    } finally { setLoading(false); }
-  };
-
-  const createBooking = async (paymentStatusValue: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { throw new Error('Not authenticated'); }
-    const bookingReference = generateReference();
-    const confirmationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const { data: booking, error: bookingError } = await supabase.from('bookings').insert({
-      booking_reference: bookingReference,
-      confirmation_code: confirmationCode,
-      user_id: session.user.id,
-      guest_name: guestName,
-      guest_email: guestEmail,
-      guest_phone: guestPhone || null,
-      total_amount: totalAmount,
-      status: 'confirmed',
-      payment_status: paymentStatusValue,
-      payment_reference: paymentReference || null,
-      check_in_date: checkInDate,
-      check_out_date: checkOutDate,
-      special_requests: specialRequests || null,
-      created_by: session.user.id,
-      booking_type: 'walk_in',
-    }).select().single();
-    if (bookingError) throw bookingError;
-    const bookingItems = selectedItems.map((item) => ({
-      booking_id: booking.id,
-      item_type: item.itemType,
-      item_id: item.itemId,
-      quantity: item.quantity,
-      price_at_booking: item.price,
-      start_date: checkInDate,
-      end_date: checkOutDate,
-    }));
-    const { error: itemsError } = await supabase.from('booking_items').insert(bookingItems);
-    if (itemsError) throw itemsError;
-    await supabase.from('booking_activity_log').insert({
-      booking_id: booking.id,
-      user_id: session.user.id,
-      action: 'walk_in_booking_created',
-      details: { total_amount: totalAmount, items: selectedItems.length, payment_status: paymentStatusValue },
-    });
-    setSuccess(`Booking created successfully! Reference: ${bookingReference}`);
-    setGuestName(''); setGuestEmail(''); setGuestPhone(''); setSpecialRequests('');
-    setSelectedItems([]); setPaymentStatus('unpaid'); setPaymentReference('');
+  const createBooking = async (paymentStatusValue: 'paid' | 'unpaid', resetAfter = true) => {
+    const response = await fetch('/api/staff/bookings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guestName, guestEmail, guestPhone, checkInDate, checkOutDate, specialRequests,
+        paymentStatus: paymentStatusValue,
+        items: selectedItems.map(({ itemType, itemId, quantity }) => ({ itemType, itemId, quantity })) }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || 'Failed to create booking')
+    if (resetAfter) {
+      setSuccess(`Booking created successfully! Reference: ${data.booking.reference}`)
+      setGuestName(''); setGuestEmail(''); setGuestPhone(''); setSpecialRequests('')
+      setSelectedItems([]); setPaymentStatus('unpaid')
+    }
+    return data.booking as { booking_id: string; reference: string; total_amount: number }
   };
 
   const handleCreateBookingOnly = async () => {
     setLoading(true)
     try {
       await createBooking('unpaid')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating booking:', err)
-      setError(err.message || 'Failed to create booking')
+      setError(err instanceof Error ? err.message : 'Failed to create booking')
     } finally {
       setLoading(false)
     }
@@ -612,7 +483,7 @@ export default function StaffBookPage() {
                     <p className="text-xs text-gray-500 capitalize">{item.itemType}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {item.itemType === 'room' && (
+                    {item.itemType !== 'room' && (
                       <div className="flex items-center gap-2">
                         <button
                           type="button"

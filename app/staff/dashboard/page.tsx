@@ -3,6 +3,7 @@ import { createServerSupabaseClient, createAdminClient } from "@/lib/supabase/se
 import { format } from "date-fns"
 import Link from "next/link"
 import { CalendarPlus, LogIn, CheckCircle2, BedDouble, Check } from "lucide-react"
+import RoomOperationsTable, { type OperationalRoom } from "@/components/staff/RoomOperationsTable"
 
 interface Room {
   id: string
@@ -10,6 +11,7 @@ interface Room {
   room_type: string
   price_per_night: number | null
   status: string | null
+  housekeeping_status: 'available' | 'dirty' | 'cleaning' | 'inspected'
 }
 
 interface BookingItem {
@@ -30,22 +32,27 @@ export default async function StaffDashboardPage() {
   if (!user) redirect("/login?redirect=/staff/dashboard")
 
   const admin = createAdminClient()
-  const { data: userRole } = await admin.from("user_roles").select("role").eq("user_id", user.id).single()
-  if (userRole?.role !== "front_desk") redirect("/login")
+  const { data: userRole } = await admin.from("user_roles").select("role, is_active").eq("user_id", user.id).single()
+  if (userRole?.role !== "front_desk" || userRole.is_active === false) redirect("/login")
 
   const today = format(new Date(), "yyyy-MM-dd")
   const { data: allRooms } = await admin.from("rooms").select("*").eq("is_active", true).order("room_number")
   const rooms = (allRooms || []) as Room[]
-  const availableRooms = rooms.filter((room) => room.status === "available")
-  const bookedRooms = rooms.filter((room) => room.status === "booked")
   const { data: arrivals } = await admin.from("bookings").select("*").eq("check_in_date", today).in("status", ["confirmed", "pending"]).is("checked_in_at", null)
   const { data: checkedIn } = await admin.from("bookings").select("*").not("checked_in_at", "is", null).is("checked_out_at", null)
-  const { data: activeBookings } = await admin.from("bookings").select("*, booking_items(*)").in("status", ["confirmed", "pending"]).order("check_in_date", { ascending: true })
+  const { data: activeBookings } = await admin.from("bookings").select("*, booking_items(*)").not("checked_in_at", "is", null).is("checked_out_at", null).order("check_in_date", { ascending: true })
   const bookings = (activeBookings || []) as ActiveBooking[]
+  const operationalRooms: OperationalRoom[] = rooms.map((room) => {
+    const booking = bookings.find((item) => item.booking_items?.some((bookingItem) => bookingItem.item_type === "room" && bookingItem.item_id === room.id))
+    return { id: room.id, roomNumber: room.room_number, roomType: room.room_type, pricePerNight: room.price_per_night,
+      operationalStatus: room.status, housekeepingStatus: room.housekeeping_status || 'available', guestName: booking?.guest_name || null,
+      checkInDate: booking?.check_in_date || null, checkOutDate: booking?.check_out_date || null, occupied: Boolean(booking) }
+  })
+  const availableRooms = operationalRooms.filter((room) => !room.occupied && room.operationalStatus === 'available' && room.housekeepingStatus === 'available')
 
   const stats = [
     { label: "Available Rooms", value: availableRooms.length, icon: Check, color: "bg-green-50 text-green-700", iconColor: "text-green-500" },
-    { label: "Booked Rooms", value: bookedRooms.length, icon: BedDouble, color: "bg-red-50 text-red-700", iconColor: "text-red-500" },
+    { label: "Occupied Rooms", value: bookings.length, icon: BedDouble, color: "bg-red-50 text-red-700", iconColor: "text-red-500" },
     { label: "Today Arrivals", value: arrivals?.length || 0, icon: LogIn, color: "bg-blue-50 text-blue-700", iconColor: "text-blue-500" },
     { label: "Checked In", value: checkedIn?.length || 0, icon: CheckCircle2, color: "bg-emerald-50 text-emerald-700", iconColor: "text-emerald-500" },
   ]
@@ -87,41 +94,7 @@ export default async function StaffDashboardPage() {
           <h2 className="text-lg font-semibold text-gray-900">Room Availability</h2>
           <p className="text-sm text-gray-500">Current room status and active guest information</p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price/Night</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guest</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Check-in</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Check-out</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {rooms.map((room) => {
-                const booking = bookings.find((item) => item.booking_items?.some((bookingItem) => bookingItem.item_type === "room" && bookingItem.item_id === room.id))
-                return (
-                  <tr key={room.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{room.room_number}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{room.room_type}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">₦{room.price_per_night?.toLocaleString()}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${room.status === "available" ? "bg-green-100 text-green-700" : room.status === "booked" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}>
-                        {room.status || "available"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{booking?.guest_name || "-"}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{booking?.check_in_date || "-"}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{booking?.check_out_date || "-"}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <RoomOperationsTable initialRooms={operationalRooms} />
       </div>
     </div>
   )

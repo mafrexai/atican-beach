@@ -3,6 +3,17 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { BedDouble, ArrowLeft, CheckCircle, XCircle } from "lucide-react"
 
+interface ManagerRoom {
+  id: string
+  room_number: string
+  room_type: string
+  price_per_night: number | null
+  max_occupancy: number | null
+  status: string | null
+  housekeeping_status: string | null
+  is_active: boolean
+}
+
 export default async function ManagerRoomsPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -51,11 +62,13 @@ export default async function ManagerRoomsPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Type</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Price/Night</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Max Occupancy</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Active</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Operational</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Housekeeping</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {rooms.map((room: any) => (
+                {(rooms as ManagerRoom[]).map((room) => (
                   <tr key={room.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{room.room_number}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{room.room_type}</td>
@@ -71,6 +84,16 @@ export default async function ManagerRoomsPage() {
                           <XCircle className="w-4 h-4" /> Inactive
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold capitalize text-gray-700">
+                        {room.status || 'available'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold capitalize text-blue-700">
+                        {room.housekeeping_status || 'available'}
+                      </span>
                     </td>
                   </tr>
                 ))}

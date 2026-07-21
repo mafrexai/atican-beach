@@ -48,11 +48,11 @@ export default function StaffLayout({
         // Check user_roles for admin or front_desk
         const { data: userRole } = await supabase
           .from('user_roles')
-          .select('role')
+          .select('role, is_active')
           .eq('user_id', session.user.id)
           .single()
 
-        if (userRole?.role === 'front_desk') {
+        if (userRole?.role === 'front_desk' && userRole.is_active !== false) {
           setUserEmail(session.user.email || '')
           setLoading(false)
           return

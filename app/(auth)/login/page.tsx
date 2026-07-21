@@ -37,12 +37,12 @@ function LoginForm() {
 
       const { data: assignedRole } = await supabase
         .from('user_roles')
-        .select('role')
+        .select('role, is_active')
         .eq('user_id', authData.user.id)
         .maybeSingle()
 
-      let role = assignedRole?.role
-      if (!role) {
+      let role = assignedRole?.is_active === false ? undefined : assignedRole?.role
+      if (!assignedRole) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')

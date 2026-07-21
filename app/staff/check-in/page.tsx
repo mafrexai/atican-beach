@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Search, LogIn, LogOut, CheckCircle2, AlertCircle, User, Mail, CalendarDays, Clock } from 'lucide-react'
+import { Search, LogIn, LogOut, CheckCircle2, AlertCircle, User, Mail } from 'lucide-react'
 
 interface Booking {
   id: string
@@ -24,8 +23,6 @@ interface Booking {
 }
 
 export default function StaffCheckInPage() {
-  const supabase = createClient()
-
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Booking[]>([])
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -47,41 +44,21 @@ export default function StaffCheckInPage() {
 
     try {
       const query = searchQuery.trim()
-      let result
-
-      // Search by booking reference (format: AB-XXXXXX)
-      if (query.toUpperCase().startsWith('AB-')) {
-        const { data, error: searchError } = await supabase
-          .from('bookings')
-          .select('*')
-          .ilike('booking_reference', query.toUpperCase())
-          .single()
-
-        if (searchError) throw searchError
-        result = data ? [data] : []
-      } else {
-        // Search by email
-        const { data, error: searchError } = await supabase
-          .from('bookings')
-          .select('*')
-          .ilike('guest_email', `%${query}%`)
-          .order('created_at', { ascending: false })
-          .limit(10)
-
-        if (searchError) throw searchError
-        result = data || []
-      }
+      const response = await fetch(`/api/staff/stays?query=${encodeURIComponent(query)}`, { cache: 'no-store' })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Failed to search bookings')
+      const result = (data.bookings || []) as Booking[]
 
       setSearchResults(result)
 
-      if (result.length === 1) {
+      if (result.length === 1 && result[0]) {
         setSelectedBooking(result[0])
       } else if (result.length === 0) {
         setError('No bookings found matching your search')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Search error:', err)
-      setError(err.message || 'Failed to search bookings')
+      setError(err instanceof Error ? err.message : 'Failed to search bookings')
     } finally {
       setSearching(false)
     }
@@ -94,44 +71,23 @@ export default function StaffCheckInPage() {
     setSuccess('')
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        setError('Not authenticated')
-        return
-      }
-
-      // Update booking with checked_in_at
-      const { error: updateError } = await supabase
-        .from('bookings')
-        .update({
-          checked_in_at: new Date().toISOString(),
-          status: 'confirmed',
-        })
-        .eq('id', booking.id)
-
-      if (updateError) throw updateError
-
-      // Log activity
-      await supabase
-        .from('booking_activity_log')
-        .insert({
-          booking_id: booking.id,
-          user_id: session.user.id,
-          action: 'checked_in',
-          details: { checked_in_at: new Date().toISOString() },
-        })
+      const response = await fetch('/api/staff/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.id, action: 'check_in' }) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Failed to check in')
+      const processedAt = data.operation?.processed_at || new Date().toISOString()
 
       setSuccess(`Checked in successfully! Guest: ${booking.guest_name}`)
 
       // Update local state
       setSelectedBooking({
         ...booking,
-        checked_in_at: new Date().toISOString(),
+        checked_in_at: processedAt,
         status: 'confirmed',
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Check-in error:', err)
-      setError(err.message || 'Failed to check in')
+      setError(err instanceof Error ? err.message : 'Failed to check in')
     } finally {
       setLoading(false)
     }
@@ -144,44 +100,23 @@ export default function StaffCheckInPage() {
     setSuccess('')
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        setError('Not authenticated')
-        return
-      }
-
-      // Update booking with checked_out_at
-      const { error: updateError } = await supabase
-        .from('bookings')
-        .update({
-          checked_out_at: new Date().toISOString(),
-          status: 'completed',
-        })
-        .eq('id', booking.id)
-
-      if (updateError) throw updateError
-
-      // Log activity
-      await supabase
-        .from('booking_activity_log')
-        .insert({
-          booking_id: booking.id,
-          user_id: session.user.id,
-          action: 'checked_out',
-          details: { checked_out_at: new Date().toISOString() },
-        })
+      const response = await fetch('/api/staff/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.id, action: 'check_out' }) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Failed to check out')
+      const processedAt = data.operation?.processed_at || new Date().toISOString()
 
       setSuccess(`Checked out successfully! Guest: ${booking.guest_name}`)
 
       // Update local state
       setSelectedBooking({
         ...booking,
-        checked_out_at: new Date().toISOString(),
+        checked_out_at: processedAt,
         status: 'completed',
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Check-out error:', err)
-      setError(err.message || 'Failed to check out')
+      setError(err instanceof Error ? err.message : 'Failed to check out')
     } finally {
       setLoading(false)
     }

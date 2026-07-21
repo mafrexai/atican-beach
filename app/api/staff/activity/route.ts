@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase/server'
+import { authorizeFrontDesk } from '@/lib/staff/authorize'
 
 const reportSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['observation', 'note']), details: z.string().trim().min(3).max(2000) }),
@@ -14,7 +14,7 @@ const reportSchema = z.discriminatedUnion('action', [
 ])
 
 export async function GET() {
-  const auth = await authorizeStaff(); if (!auth.ok) return auth.response
+  const auth = await authorizeFrontDesk(); if (!auth.ok) return auth.response
   const [logs, rooms] = await Promise.all([
     auth.admin.from('staff_activity_logs').select('id, user_id, action, summary, details, severity, created_at').order('created_at', { ascending: false }).limit(75),
     auth.admin.from('rooms').select('id, room_number, room_type, status').eq('is_active', true).order('room_number'),
@@ -24,7 +24,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await authorizeStaff(); if (!auth.ok) return auth.response
+  const auth = await authorizeFrontDesk(); if (!auth.ok) return auth.response
   const parsed = reportSchema.safeParse(await request.json())
   if (!parsed.success) return NextResponse.json({ error: 'Please complete all required report details.', details: parsed.error.flatten() }, { status: 400 })
   const report = parsed.data
@@ -54,15 +54,4 @@ export async function POST(request: NextRequest) {
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true, message: `${summary}.` }, { status: 201 })
-}
-
-async function authorizeStaff(): Promise<
-  | { ok: true; admin: ReturnType<typeof createAdminClient>; userId: string; role: string }
-  | { ok: false; response: NextResponse }
-> {
-  const server = await createServerSupabaseClient(); const { data: { user } } = await server.auth.getUser()
-  if (!user) return { ok: false, response: NextResponse.json({ error: 'Authentication required.' }, { status: 401 }) }
-  const admin = createAdminClient(); const { data: role } = await admin.from('user_roles').select('role').eq('user_id', user.id).single()
-  if (role?.role !== 'front_desk') return { ok: false, response: NextResponse.json({ error: 'Front-desk access required.' }, { status: 403 }) }
-  return { ok: true, admin, userId: user.id, role: role.role }
 }

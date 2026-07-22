@@ -1,5 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import heroBeachImage from '@/public/images/home/atican-beach-hero.png'
+import room602OceanViewImage from '@/public/images/home/room-602-ocean-view.png'
 import {
   ArrowRight, CalendarDays, Clock3, MapPin, ShieldCheck,
   Sparkles, Star, Sun, Users, Waves,
@@ -7,7 +9,7 @@ import {
 import { getFeaturedRooms } from '@/lib/supabase/queries'
 
 const escapes = [
-  { title: 'Stay by the ocean', copy: 'Wake to Atlantic light, soft linen and the hush of the tide.', href: '/rooms', image: '/hero-beach1.jpg', eyebrow: 'Rooms & suites' },
+  { title: 'Stay by the ocean', copy: 'Wake to Atlantic light, soft linen and the hush of the tide.', href: '/rooms', image: room602OceanViewImage, eyebrow: 'Rooms & suites' },
   { title: 'Celebrate on the sand', copy: 'Turn weddings, birthdays and private gatherings into golden memories.', href: '/events', image: '/images/banner1.jpeg', eyebrow: 'Beach events' },
   { title: 'Play until sunset', copy: 'Horse rides, beach games, bonfires and slow afternoons by the water.', href: '/experiences', image: '/images/banner3.jpeg', eyebrow: 'Experiences' },
 ]
@@ -25,7 +27,7 @@ export default async function HomePage() {
   return (
     <div className="overflow-hidden bg-[#FFFDF7] text-[#073B4C]">
       <section className="relative -mt-16 min-h-[860px] lg:min-h-[900px]">
-        <Image src="/hero-beach.jpg" alt="Atican Beach Resort shoreline and tropical palms" fill priority className="object-cover object-center" sizes="100vw" />
+        <Image src={heroBeachImage} alt="A couple walking along Atican Beach Resort at golden hour" fill priority className="object-cover object-center" sizes="100vw" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,35,46,.82)_0%,rgba(7,59,76,.48)_48%,rgba(7,59,76,.12)_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(7,59,76,.6)_0%,transparent_45%)]" />
 
@@ -85,7 +87,7 @@ export default async function HomePage() {
               {featuredRooms.map((room, index) => (
                 <Link key={room.id} href={`/rooms/${room.id}`} className={`group overflow-hidden rounded-[1.75rem] bg-white shadow-[0_18px_50px_rgba(7,59,76,.08)] ${index === 0 ? 'lg:col-span-2 lg:grid lg:grid-cols-[1.35fr_.65fr]' : ''}`}>
                   <div className={`relative min-h-[300px] overflow-hidden ${index === 0 ? 'lg:min-h-[470px]' : ''}`}>
-                    {room.image_url ? <Image src={room.image_url} alt={room.image_alt || room.room_type} fill className="object-cover transition duration-700 group-hover:scale-105" sizes={index === 0 ? '(max-width: 1024px) 100vw, 55vw' : '(max-width: 1024px) 100vw, 30vw'} /> : <Image src="/hero-beach1.jpg" alt="Atican beachfront room" fill className="object-cover transition duration-700 group-hover:scale-105" sizes="50vw" />}
+                    {room.image_url ? <Image src={room.image_url} alt={room.image_alt || room.room_type} fill className="object-cover transition duration-700 group-hover:scale-105" sizes={index === 0 ? '(max-width: 1024px) 100vw, 55vw' : '(max-width: 1024px) 100vw, 30vw'} /> : <Image src={room602OceanViewImage} alt="Atican beachfront room with an ocean view" fill className="object-cover transition duration-700 group-hover:scale-105" sizes="50vw" />}
                     <span className="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-[#073B4C] backdrop-blur">Ocean escape</span>
                   </div>
                   <div className="flex flex-col justify-between p-6"><div><p className="text-xs font-bold uppercase tracking-[.18em] text-[#F47C5C]">Room {room.room_number}</p><h3 className="mt-2 font-display text-3xl text-[#073B4C]">{room.room_type}</h3><p className="mt-3 text-sm leading-6 text-[#6c8188]">A calm, comfortable base for beach days and slow mornings.</p></div><div className="mt-8 flex items-end justify-between"><p className="text-xl font-bold text-[#073B4C]">₦{room.price_per_night.toLocaleString()}<span className="text-xs font-normal text-[#6c8188]"> / night</span></p><ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" /></div></div>

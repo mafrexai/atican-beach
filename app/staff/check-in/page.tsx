@@ -126,7 +126,7 @@ export default function StaffCheckInPage() {
   const handleVerifyPayment = async (booking: Booking) => {
     setLoading(true); setError(''); setSuccess('')
     try {
-      const response = await fetch('/api/paystack/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const response = await fetch('/api/payments/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reference: booking.booking_reference }) })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Unable to verify payment')

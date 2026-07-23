@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { CheckCircle, Download, Calendar, MapPin, Users, Phone, Mail, ChevronRight } from 'lucide-react'
+import { reconcileBookingPayment } from '@/lib/payments/reconcile'
+import { CheckCircle, Clock, Download, Calendar, Users, Phone, Mail, ChevronRight } from 'lucide-react'
 import QRCode from 'react-qr-code'
 
 interface Props {
@@ -14,6 +15,12 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
 
   if (!ref) {
     redirect('/rooms')
+  }
+
+  try {
+    await reconcileBookingPayment(ref)
+  } catch (error) {
+    console.error('Booking confirmation reconciliation failed:', error)
   }
 
   const supabase = await createServerSupabaseClient()
@@ -32,9 +39,10 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
     redirect('/rooms')
   }
 
+  const isPaid = booking.payment_status === 'paid'
   const qrValue = JSON.stringify({
     bookingRef: booking.booking_reference,
-    confirmationCode: booking.confirmationCode,
+    confirmationCode: booking.confirmation_code,
     guestName: booking.guest_name,
   })
 
@@ -49,14 +57,18 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
   return (
     <div className="min-h-screen bg-[#F5F1E8]">
       {/* Success Header */}
-      <section className="bg-gradient-to-r from-green-600 to-emerald-600 py-16 text-white">
+      <section className={`bg-gradient-to-r py-16 text-white ${isPaid ? 'from-green-600 to-emerald-600' : 'from-amber-500 to-orange-500'}`}>
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <CheckCircle className="w-20 h-20 mx-auto mb-4 text-green-200" />
+          {isPaid
+            ? <CheckCircle className="w-20 h-20 mx-auto mb-4 text-green-200" />
+            : <Clock className="w-20 h-20 mx-auto mb-4 text-amber-100" />}
           <h1 className="text-4xl font-bold mb-2" style={{ fontFamily: 'var(--font-playfair)' }}>
-            Booking Confirmed!
+            {isPaid ? 'Booking Confirmed!' : 'Payment Confirmation Pending'}
           </h1>
-          <p className="text-green-100 text-lg">
-            Your reservation has been successfully confirmed. A confirmation email has been sent to {booking.guest_email}.
+          <p className={`${isPaid ? 'text-green-100' : 'text-amber-50'} text-lg`}>
+            {isPaid
+              ? `Your reservation has been successfully confirmed. A confirmation email has been sent to ${booking.guest_email}.`
+              : 'We are securely checking your payment. Please refresh this page shortly; your booking will only be confirmed after payment is verified.'}
           </p>
         </div>
       </section>
@@ -75,8 +87,8 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
             </div>
           </div>
 
-          {/* QR Code */}
-          <div className="flex flex-col items-center py-6 border-t border-b">
+          {/* QR Code is an admission credential and must only be issued after verified payment. */}
+          {isPaid && <div className="flex flex-col items-center py-6 border-t border-b">
             <p className="text-sm text-gray-500 mb-4">Show this QR code at the gate for entry</p>
             <div className="bg-white p-4 rounded-xl border-2 border-dashed border-gray-200">
               <QRCode value={qrValue} size={180} />
@@ -103,7 +115,7 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
             <div className="hidden">
               <QRCode id="booking-qr-code" value={qrValue} size={256} />
             </div>
-          </div>
+          </div>}
 
           {/* Booking Details */}
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -159,7 +171,7 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
             ))}
           </div>
           <div className="mt-4 pt-4 border-t flex justify-between items-center">
-            <span className="text-lg font-semibold text-[#082032]">Total Paid</span>
+            <span className="text-lg font-semibold text-[#082032]">{isPaid ? 'Total Paid' : 'Total Due'}</span>
             <span className="text-2xl font-bold text-[#0A3D62]">₦{booking.total_amount.toLocaleString()}</span>
           </div>
         </div>

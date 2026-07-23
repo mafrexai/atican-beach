@@ -234,7 +234,7 @@ export function VoiceReceptionist() {
     setIsStartingPayment(true)
     setBookingError('')
     try {
-      const response = await fetch('/api/paystack/initialize', {
+      const response = await fetch('/api/payments/initialize', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: bookingResult.guestEmail,
@@ -438,7 +438,7 @@ export function VoiceReceptionist() {
                             <p className="mt-1">{bookingDraft.checkIn} → {bookingDraft.checkOut}</p>
                             <p className="mt-1">{bookingDraft.guestName} · {bookingDraft.guestEmail}</p>
                           </div>
-                          <p className="text-[10px] leading-relaxed text-gray-500">We will reserve an available room for these exact dates. Your stay becomes confirmed only after Paystack verifies payment.</p>
+                          <p className="text-[10px] leading-relaxed text-gray-500">We will reserve an available room for these exact dates. Your stay becomes confirmed only after the payment provider verifies payment.</p>
                           <div className="flex gap-2">
                             <button type="button" disabled={bookingStep === 'submitting'} onClick={() => setBookingStep('details')} className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 font-semibold text-gray-600 disabled:opacity-50">Edit</button>
                             <button type="button" disabled={bookingStep === 'submitting'} onClick={confirmBooking} className="flex-1 rounded-lg bg-[#F97316] px-3 py-2.5 font-semibold text-white disabled:opacity-60">{bookingStep === 'submitting' ? 'Reserving…' : 'Reserve room'}</button>
@@ -449,7 +449,7 @@ export function VoiceReceptionist() {
                       {bookingStep === 'complete' && bookingResult && (
                         <div className="space-y-3 text-xs">
                           <div className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-emerald-900"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-semibold">Reference {bookingResult.reference}</p><p className="mt-1">{bookingResult.roomType}, room {bookingResult.roomNumber} · ₦{bookingResult.totalAmount.toLocaleString()}</p></div></div>
-                          <button type="button" onClick={startPayment} disabled={isStartingPayment} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#0A3D62] px-3 py-2.5 font-semibold text-white disabled:opacity-60"><CreditCard className="h-4 w-4" />{isStartingPayment ? 'Opening Paystack…' : 'Pay securely with Paystack'}</button>
+                          <button type="button" onClick={startPayment} disabled={isStartingPayment} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#0A3D62] px-3 py-2.5 font-semibold text-white disabled:opacity-60"><CreditCard className="h-4 w-4" />{isStartingPayment ? 'Opening secure payment…' : 'Pay securely'}</button>
                         </div>
                       )}
 

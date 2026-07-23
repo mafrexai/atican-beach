@@ -40,7 +40,8 @@ function CheckoutContent() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [paystackConfigured, setPaystackConfigured] = useState<boolean | null>(null)
+  const [paymentConfigured, setPaymentConfigured] = useState<boolean | null>(null)
+  const [paymentProvider, setPaymentProvider] = useState<'mafrexpay' | 'paystack' | null>(null)
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null)
 
   // Redirect to login if not authenticated — only after auth has fully resolved
@@ -67,16 +68,17 @@ function CheckoutContent() {
 
   // Check if Paystack is configured on mount
   useEffect(() => {
-    const checkPaystackConfig = async () => {
+    const checkPaymentConfig = async () => {
       try {
-        const res = await fetch('/api/paystack/status')
+        const res = await fetch('/api/payments/status')
         const data = await res.json()
-        setPaystackConfigured(data.configured === true)
+        setPaymentConfigured(data.configured === true)
+        setPaymentProvider(data.provider || null)
       } catch {
-        setPaystackConfigured(false)
+        setPaymentConfigured(false)
       }
     }
-    checkPaystackConfig()
+    checkPaymentConfig()
   }, [])
 
   const handleChange = (
@@ -133,7 +135,7 @@ function CheckoutContent() {
       const bookingRef = bookingData.data.reference
 
       // Step 2: If Paystack is not configured, show success message
-      if (paystackConfigured === false) {
+      if (paymentConfigured === false) {
         setBookingSuccess(bookingRef)
         clearCart()
         setLoading(false)
@@ -141,7 +143,7 @@ function CheckoutContent() {
       }
 
       // Step 3: Initialize Paystack payment
-      const paystackRes = await fetch('/api/paystack/initialize', {
+      const paymentRes = await fetch('/api/payments/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -152,14 +154,14 @@ function CheckoutContent() {
         }),
       })
 
-      const paystackData = await paystackRes.json()
+      const paymentData = await paymentRes.json()
 
-      if (!paystackData.success) {
-        throw new Error(paystackData.error || 'Payment initialization failed')
+      if (!paymentData.success) {
+        throw new Error(paymentData.error || 'Payment initialization failed')
       }
 
       // Payment status is updated only by Paystack's verified webhook.
-      window.location.assign(paystackData.data.authorization_url)
+      window.location.assign(paymentData.data.authorization_url)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
       setLoading(false)
@@ -271,7 +273,7 @@ function CheckoutContent() {
             </div>
 
             {/* Payment Status Notice */}
-            {paystackConfigured === false && (
+            {paymentConfigured === false && (
               <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-start gap-3">
                   <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -354,7 +356,7 @@ function CheckoutContent() {
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Processing...
                   </>
-                ) : paystackConfigured === false ? (
+                ) : paymentConfigured === false ? (
                   <>
                     <Info className="w-5 h-5" />
                     Complete Booking (Payment Offline)
@@ -362,15 +364,17 @@ function CheckoutContent() {
                 ) : (
                   <>
                     <CreditCard className="w-5 h-5" />
-                    Pay ₦{total.toLocaleString()} with Paystack
+                    Pay ₦{total.toLocaleString()} with {paymentProvider === 'mafrexpay' ? 'MafrexPay' : 'Paystack'}
                   </>
                 )}
               </button>
 
               <p className="text-center text-sm text-gray-500">
-                {paystackConfigured === false
+                {paymentConfigured === false
                   ? 'Your booking will be created. Our team will contact you for payment arrangements.'
-                  : 'Secure payment powered by Paystack. You will be redirected to complete payment.'
+                  : paymentProvider === 'mafrexpay'
+                    ? 'Secure payment powered by MafrexPay. You will be redirected to complete payment.'
+                    : 'Secure payment powered by Paystack. You will be redirected to complete payment.'
                 }
               </p>
             </form>

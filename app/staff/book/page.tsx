@@ -102,7 +102,7 @@ export default function StaffBookPage() {
         setLoading(true)
         try {
           // Verify the payment with Paystack
-          const response = await fetch('/api/paystack/verify', {
+          const response = await fetch('/api/payments/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ reference: ref }),
@@ -189,7 +189,7 @@ export default function StaffBookPage() {
       const bookingReference = booking.reference
 
       // Initialize Paystack payment
-      const response = await fetch('/api/paystack/initialize', {
+      const response = await fetch('/api/payments/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

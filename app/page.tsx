@@ -1,6 +1,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import heroBeachImage from '@/public/images/home/atican-beach-hero.png'
+import heroBeachImage from '@/public/images/home/atican-beach-hero2.png'
+// import heroBeachImage from '@/public/images/home/burn-fire.png'
+
 import room602OceanViewImage from '@/public/images/home/room-602-ocean-view.png'
 import {
   ArrowRight, CalendarDays, Clock3, MapPin, ShieldCheck,
@@ -10,8 +12,8 @@ import { getFeaturedRooms } from '@/lib/supabase/queries'
 
 const escapes = [
   { title: 'Stay by the ocean', copy: 'Wake to Atlantic light, soft linen and the hush of the tide.', href: '/rooms', image: room602OceanViewImage, eyebrow: 'Rooms & suites' },
-  { title: 'Celebrate on the sand', copy: 'Turn weddings, birthdays and private gatherings into golden memories.', href: '/events', image: '/images/banner1.jpeg', eyebrow: 'Beach events' },
-  { title: 'Play until sunset', copy: 'Horse rides, beach games, bonfires and slow afternoons by the water.', href: '/experiences', image: '/images/banner3.jpeg', eyebrow: 'Experiences' },
+  { title: 'Celebrate on the sand', copy: 'Turn weddings, birthdays and private gatherings into golden memories.', href: '/events', image: '/images/home/family-on-beach.png', eyebrow: 'Beach events' },
+  { title: 'Play until sunset', copy: 'Horse rides, beach games, bonfires and slow afternoons by the water.', href: '/experiences', image: '/images/home/burn-fire2.png', eyebrow: 'Experiences' },
 ]
 
 const dayPlan = [

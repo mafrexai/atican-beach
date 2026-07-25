@@ -20,7 +20,7 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: 'Atican Beach Resort & Hotel | Luxury Beachfront Experience',
-  description: 'Experience 7-star luxury at Atican Beach Resort. Book rooms, tents, experiences, and events online.',
+  description: 'Experience beach luxury at Atican Beach Resort. Book rooms, tents, experiences, and events online.',
 }
 
 export default function RootLayout({

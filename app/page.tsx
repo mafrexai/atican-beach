@@ -3,7 +3,7 @@ import Link from 'next/link'
 import heroBeachImage from '@/public/images/home/atican-beach-hero2.png'
 // import heroBeachImage from '@/public/images/home/burn-fire.png'
 
-import room602OceanViewImage from '@/public/images/home/room-602-ocean-view.png'
+import room602OceanViewImage from '@/public/images/home/room-602-ocean-view2.jpeg'
 import {
   ArrowRight, CalendarDays, Clock3, MapPin, ShieldCheck,
   Sparkles, Star, Sun, Users, Waves,

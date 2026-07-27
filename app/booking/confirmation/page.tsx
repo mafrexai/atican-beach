@@ -4,6 +4,7 @@ import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase/se
 import { reconcileBookingPayment } from '@/lib/payments/reconcile'
 import { CheckCircle, Clock, Download, Calendar, Users, Phone, Mail, ChevronRight } from 'lucide-react'
 import QRCode from 'react-qr-code'
+import DownloadBookingQr from '@/components/booking/DownloadBookingQr'
 
 interface Props {
   searchParams: Promise<{ ref?: string }>
@@ -94,28 +95,10 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
             <div className="bg-white p-4 rounded-xl border-2 border-dashed border-gray-200">
               <QRCode value={qrValue} size={180} />
             </div>
-            <button
-              onClick={() => {
-                const svg = document.getElementById('booking-qr-code')
-                if (svg) {
-                  const svgData = new XMLSerializer().serializeToString(svg)
-                  const blob = new Blob([svgData], { type: 'image/svg+xml' })
-                  const url = URL.createObjectURL(blob)
-                  const a = document.createElement('a')
-                  a.href = url
-                  a.download = `atican-beach-${booking.booking_reference}.svg`
-                  a.click()
-                  URL.revokeObjectURL(url)
-                }
-              }}
-              className="mt-4 flex items-center gap-2 text-[#0A3D62] hover:text-[#F97316] font-medium text-sm"
-            >
-              <Download className="w-4 h-4" />
-              Download QR Code
-            </button>
-            <div className="hidden">
-              <QRCode id="booking-qr-code" value={qrValue} size={256} />
-            </div>
+            <DownloadBookingQr
+              bookingReference={booking.booking_reference}
+              value={qrValue}
+            />
           </div>}
 
           {/* Booking Details */}

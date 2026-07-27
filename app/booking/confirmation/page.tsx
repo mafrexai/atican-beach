@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase/server'
 import { reconcileBookingPayment } from '@/lib/payments/reconcile'
 import { CheckCircle, Clock, Download, Calendar, Users, Phone, Mail, ChevronRight } from 'lucide-react'
 import QRCode from 'react-qr-code'
@@ -23,8 +23,9 @@ export default async function BookingConfirmationPage({ searchParams }: Props) {
     console.error('Booking confirmation reconciliation failed:', error)
   }
 
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const server = await createServerSupabaseClient()
+  const { data: { user } } = await server.auth.getUser()
+  const supabase = createAdminClient()
 
   const { data: booking } = await supabase
     .from('bookings')

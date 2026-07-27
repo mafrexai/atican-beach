@@ -3,6 +3,7 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getPaymentOrder } from '@/lib/mafrexpay'
 import { verifyTransaction } from '@/lib/paystack'
+import { finalizeBookingPayment } from '@/lib/payments/finalize'
 
 export interface ReconciliationResult {
   paid: boolean
@@ -52,28 +53,13 @@ export async function reconcileBookingPayment(
 
   if (!isPaid) return { paid: false, status: 'pending', provider, reference: providerReference, amount }
 
-  const { data: reconciled, error: updateError } = await supabase
-    .from('bookings')
-    .update({
-      payment_status: 'paid',
-      status: 'confirmed',
-      payment_reference: providerReference,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', booking.id)
-    .eq('payment_status', 'unpaid')
-    .select('id')
-    .maybeSingle()
-
-  if (updateError) throw new Error('RECONCILIATION_FAILED')
-  if (reconciled) {
-    await supabase.from('booking_activity_log').insert({
-      booking_id: booking.id,
-      user_id: actorUserId || null,
-      action: 'payment_verified',
-      details: { reference: providerReference, amount, source: `${provider}_status` },
-    })
-  }
+  await finalizeBookingPayment({
+    bookingReference,
+    providerReference,
+    paidAmount: amount,
+    source: `${provider}_status`,
+    actorUserId,
+  })
 
   return { paid: true, status: 'paid', provider, reference: providerReference, amount }
 }

@@ -19,6 +19,7 @@ import {
   UserCheck,
   UserPlus,
 } from 'lucide-react'
+import DashboardAutoRefresh from '@/components/dashboard/DashboardAutoRefresh'
 
 const adminNavItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -131,6 +132,7 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <DashboardAutoRefresh />
       {/* Mobile sidebar toggle */}
       <button
         onClick={() => setSidebarOpen(true)}

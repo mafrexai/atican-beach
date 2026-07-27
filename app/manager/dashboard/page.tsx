@@ -1,5 +1,6 @@
 ﻿import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { createAdminClient } from "@/lib/supabase/server"
 import Link from "next/link"
 import { Users, BedDouble, Activity, BarChart3, Wrench, CalendarDays } from "lucide-react"
 
@@ -21,16 +22,17 @@ export default async function ManagerDashboardPage() {
     redirect("/manager/login")
   }
 
-  const [{ data: bookings }, { data: rooms }, { data: staff }] = await Promise.all([
-    supabase.from("bookings").select("id", { count: "exact", head: true }),
-    supabase.from("rooms").select("id", { count: "exact", head: true }).eq("is_active", true),
-    supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("role", "front_desk"),
+  const admin = createAdminClient()
+  const [{ count: bookingCount }, { count: roomCount }, { count: staffCount }] = await Promise.all([
+    admin.from("bookings").select("id", { count: "exact", head: true }),
+    admin.from("rooms").select("id", { count: "exact", head: true }).eq("is_active", true),
+    admin.from("user_roles").select("id", { count: "exact", head: true }).eq("role", "front_desk").neq("is_active", false),
   ])
 
   const stats = [
-    { label: "Total Bookings", value: bookings?.length || 0, icon: CalendarDays, color: "bg-blue-500" },
-    { label: "Active Rooms", value: rooms?.length || 0, icon: BedDouble, color: "bg-green-500" },
-    { label: "Staff Members", value: staff?.length || 0, icon: Users, color: "bg-purple-500" },
+    { label: "Total Bookings", value: bookingCount || 0, icon: CalendarDays, color: "bg-blue-500" },
+    { label: "Active Rooms", value: roomCount || 0, icon: BedDouble, color: "bg-green-500" },
+    { label: "Staff Members", value: staffCount || 0, icon: Users, color: "bg-purple-500" },
   ]
 
   return (

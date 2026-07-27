@@ -17,6 +17,7 @@ import {
   Wrench,
   BadgePercent,
 } from "lucide-react"
+import DashboardAutoRefresh from "@/components/dashboard/DashboardAutoRefresh"
 
 const managerNavItems = [
   { name: "Dashboard", href: "/manager/dashboard", icon: LayoutDashboard },
@@ -115,6 +116,7 @@ export default function ManagerLayout({
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <DashboardAutoRefresh />
       <header className="lg:hidden fixed top-0 left-0 right-0 bg-[#082032] text-white z-50">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">

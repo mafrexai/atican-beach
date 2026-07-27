@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { DashboardHeader } from '@/components/layout/DashboardHeader'
+import DashboardAutoRefresh from '@/components/dashboard/DashboardAutoRefresh'
 
 export default async function DashboardLayout({
   children,
@@ -16,6 +17,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-[#F5F1E8]">
+      <DashboardAutoRefresh />
       {/* Dashboard-specific header */}
       <DashboardHeader />
 

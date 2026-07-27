@@ -11,15 +11,20 @@ export default async function AdminDashboard() {
   let totalExperiences = 0
   let totalBookings = 0
   let pendingBookings = 0
+  let monthlyRevenue = 0
   let recentBookings: any[] | null = null
 
   try {
-    const [roomsResult, tentsResult, experiencesResult, bookingsResult, pendingResult, recentResult] = await Promise.all([
+    const monthStart = new Date()
+    monthStart.setDate(1)
+    monthStart.setHours(0, 0, 0, 0)
+    const [roomsResult, tentsResult, experiencesResult, bookingsResult, pendingResult, revenueResult, recentResult] = await Promise.all([
       supabase.from('rooms').select('*', { count: 'exact', head: true }),
       supabase.from('tents').select('*', { count: 'exact', head: true }),
       supabase.from('experiences').select('*', { count: 'exact', head: true }),
       supabase.from('bookings').select('*', { count: 'exact', head: true }),
       supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('bookings').select('total_amount').eq('payment_status', 'paid').neq('status', 'cancelled').gte('created_at', monthStart.toISOString()),
       supabase.from('bookings').select('id, booking_reference, guest_name, total_amount, status, created_at').order('created_at', { ascending: false }).limit(5),
     ])
 
@@ -28,6 +33,10 @@ export default async function AdminDashboard() {
     totalExperiences = experiencesResult.count || 0
     totalBookings = bookingsResult.count || 0
     pendingBookings = pendingResult.count || 0
+    monthlyRevenue = (revenueResult.data || []).reduce(
+      (sum: number, booking: { total_amount: number | null }) => sum + Number(booking.total_amount || 0),
+      0
+    )
     recentBookings = recentResult.data
   } catch {
     // If any query fails (e.g., table doesn't exist), use default values
@@ -39,7 +48,7 @@ export default async function AdminDashboard() {
     { title: 'Experiences', value: totalExperiences, icon: Sparkles, color: 'bg-purple-500', href: '/admin/experiences' },
     { title: 'Total Bookings', value: totalBookings, icon: CalendarDays, color: 'bg-emerald-500', href: '/admin/bookings' },
     { title: 'Pending', value: pendingBookings, icon: Clock, color: 'bg-orange-500', href: '/admin/bookings' },
-    { title: 'Revenue (MTD)', value: '₦0', icon: CreditCard, color: 'bg-[#0A3D62]', href: '/admin/payments' },
+    { title: 'Revenue (MTD)', value: `₦${monthlyRevenue.toLocaleString()}`, icon: CreditCard, color: 'bg-[#0A3D62]', href: '/admin/payments' },
   ]
 
   return (

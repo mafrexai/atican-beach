@@ -14,7 +14,9 @@ export default async function ManagerAnalyticsPage() {
   const { data: bookings } = await admin.from('bookings').select('*')
   const { data: rooms } = await admin.from('rooms').select('*')
 
-  const totalRevenue = bookings?.reduce((sum: number, b: any) => sum + (b.total_amount || 0), 0) || 0
+  const totalRevenue = bookings
+    ?.filter((b: any) => b.payment_status === 'paid' && b.status !== 'cancelled')
+    .reduce((sum: number, b: any) => sum + Number(b.total_amount || 0), 0) || 0
   const paidBookings = bookings?.filter((b: any) => b.payment_status === 'paid').length || 0
   const totalBookings = bookings?.length || 0
   const occupancyRate = rooms && rooms.length > 0

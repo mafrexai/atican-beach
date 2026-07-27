@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { createAdminClient, createServerSupabaseClient } from "@/lib/supabase/server"
 import { verifyTransaction, isPaystackConfigured } from "@/lib/paystack"
+import { finalizeBookingPayment } from "@/lib/payments/finalize"
 import { apiSuccess, apiError } from "@/lib/api/responses"
 
 export async function POST(request: NextRequest) {
@@ -46,15 +47,15 @@ export async function POST(request: NextRequest) {
       return apiError("Payment amount does not match this booking", 409, "AMOUNT_MISMATCH")
     }
 
-    const { data: reconciled, error: updateError } = await supabase.from("bookings").update({
-      payment_status: "paid", status: "confirmed", payment_reference: response.data.reference, updated_at: new Date().toISOString(),
-    }).eq("id", booking.id).eq("payment_status", "unpaid")
-      .select("id, booking_reference, payment_status, status").maybeSingle()
-    if (updateError) return apiError("Payment was verified but the booking could not be updated", 500, "RECONCILIATION_FAILED")
+    const finalization = await finalizeBookingPayment({
+      bookingReference: reference,
+      providerReference: response.data.reference,
+      paidAmount,
+      source: "paystack_verify",
+      actorUserId: user.id,
+    })
 
-    if (reconciled) {
-      await supabase.from("booking_activity_log").insert({ booking_id: booking.id, user_id: user.id,
-        action: "payment_verified", details: { reference: response.data.reference, amount: paidAmount, source: "paystack_verify" } })
+    if (finalization.updated) {
       if (assignment?.role === "front_desk") {
         await supabase.from("staff_activity_logs").insert({ user_id: user.id, actor_role: "front_desk", action: "payment_verified",
           summary: `Verified payment for ${booking.booking_reference}`, category: "payment", severity: "info",
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
       amount: response.data.amount / 100,
       status: response.data.status,
       customer: response.data.customer,
-      booking: reconciled || { id: booking.id, booking_reference: booking.booking_reference, payment_status: "paid", status: "confirmed" },
+      booking: finalization.booking,
     })
   } catch (error) {
     console.error("Paystack verify error:", error)

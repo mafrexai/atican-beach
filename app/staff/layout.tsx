@@ -14,6 +14,7 @@ import {
   Waves,
   ClipboardList,
 } from 'lucide-react'
+import DashboardAutoRefresh from '@/components/dashboard/DashboardAutoRefresh'
 
 const staffNavItems = [
   { name: 'Dashboard', href: '/staff/dashboard', icon: LayoutDashboard },
@@ -88,6 +89,7 @@ export default function StaffLayout({
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <DashboardAutoRefresh />
       {/* Mobile sidebar toggle */}
       <button
         onClick={() => setSidebarOpen(true)}

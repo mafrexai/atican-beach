@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const page = normalizePage(request.nextUrl.searchParams.get('page'))
     const cartItemTypes = (request.nextUrl.searchParams.get('cart') || '')
       .split(',')
-      .filter((type) => ['room', 'experience', 'tent', 'event_space'].includes(type))
+      .filter((type) => ['room', 'experience', 'tent', 'event_space', 'public_event'].includes(type))
       .slice(0, 10)
 
     const recommendation = await getConciergeRecommendation(

@@ -16,6 +16,7 @@ import {
   BarChart3,
   Wrench,
   BadgePercent,
+  CalendarDays,
 } from "lucide-react"
 import DashboardAutoRefresh from "@/components/dashboard/DashboardAutoRefresh"
 
@@ -27,6 +28,7 @@ const managerNavItems = [
   { name: "Analytics", href: "/manager/analytics", icon: BarChart3 },
   { name: "Maintenance", href: "/manager/maintenance", icon: Wrench },
   { name: "Concierge Offers", href: "/manager/offers", icon: BadgePercent },
+  { name: "Public Events", href: "/manager/events", icon: CalendarDays },
 ]
 
 export default function ManagerLayout({

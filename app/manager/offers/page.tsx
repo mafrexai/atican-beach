@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { BadgePercent, Loader2, Pencil, Plus, Power, Trash2, X } from 'lucide-react'
 
-type TargetType = 'room' | 'experience' | 'tent' | 'event_space'
+type TargetType = 'room' | 'experience' | 'tent' | 'event_space' | 'public_event'
 
 interface CatalogItem { id: string; type: TargetType; name: string; price: number }
 interface OfferRow {
@@ -122,7 +122,7 @@ export default function ManagerOffersPage() {
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <label className="sm:col-span-2 text-sm font-medium text-gray-700">Offer title<input required minLength={3} maxLength={100} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5" /></label>
           <label className="sm:col-span-2 text-sm font-medium text-gray-700">Guest-facing description<textarea required minLength={10} maxLength={500} rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5" /></label>
-          <label className="text-sm font-medium text-gray-700">Catalog type<select value={form.targetType} onChange={(e) => setForm({ ...form, targetType: e.target.value as TargetType, targetId: '' })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5"><option value="room">Room</option><option value="experience">Experience</option><option value="tent">Tent</option><option value="event_space">Event space</option></select></label>
+          <label className="text-sm font-medium text-gray-700">Catalog type<select value={form.targetType} onChange={(e) => setForm({ ...form, targetType: e.target.value as TargetType, targetId: '' })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5"><option value="room">Room</option><option value="experience">Experience</option><option value="tent">Tent</option><option value="event_space">Setup package</option><option value="public_event">Public event</option></select></label>
           <label className="text-sm font-medium text-gray-700">Catalog item<select required value={form.targetId} onChange={(e) => setForm({ ...form, targetId: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5"><option value="">Select an item</option>{availableTargets.map((item) => <option key={item.id} value={item.id}>{item.name} — ₦{item.price.toLocaleString()}</option>)}</select></label>
           <label className="text-sm font-medium text-gray-700">Offer price <span className="font-normal text-gray-400">(blank = live price)</span><input type="number" min="0" max={selectedItem?.price} value={form.offerPrice} onChange={(e) => setForm({ ...form, offerPrice: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5" /></label>
           <label className="text-sm font-medium text-gray-700">Button text<input required value={form.ctaText} onChange={(e) => setForm({ ...form, ctaText: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5" /></label>

@@ -7,7 +7,7 @@ const offerSchema = z.object({
   id: z.string().uuid().optional(),
   title: z.string().trim().min(3).max(100),
   description: z.string().trim().min(10).max(500),
-  targetType: z.enum(['room', 'experience', 'tent', 'event_space']),
+  targetType: z.enum(['room', 'experience', 'tent', 'event_space', 'public_event']),
   targetId: z.string().uuid(),
   offerPrice: z.number().nonnegative().nullable(),
   ctaText: z.string().trim().min(2).max(40),
@@ -108,15 +108,16 @@ function toDatabaseRow(values: z.infer<typeof offerSchema> | Omit<z.infer<typeof
 }
 
 async function validateTargetAndPrice(admin: SupabaseClient, type: string, id: string, offerPrice: number | null) {
-  const config: Record<string, { table: string; price: string }> = {
-    room: { table: 'rooms', price: 'price_per_night' },
-    experience: { table: 'experiences', price: 'price' },
-    tent: { table: 'tents', price: 'price' },
-    event_space: { table: 'event_spaces', price: 'price' },
+  const config: Record<string, { table: string; price: string; stateColumn: string; stateValue: boolean | string }> = {
+    room: { table: 'rooms', price: 'price_per_night', stateColumn: 'is_active', stateValue: true },
+    experience: { table: 'experiences', price: 'price', stateColumn: 'is_active', stateValue: true },
+    tent: { table: 'tents', price: 'price', stateColumn: 'is_active', stateValue: true },
+    event_space: { table: 'event_spaces', price: 'price', stateColumn: 'is_active', stateValue: true },
+    public_event: { table: 'public_events', price: 'ticket_price', stateColumn: 'status', stateValue: 'published' },
   }
   const target = config[type]
   if (!target) return { ok: false, error: 'Unsupported offer target.' }
-  const { data } = await admin.from(target.table).select(`id, ${target.price}`).eq('id', id).eq('is_active', true).single()
+  const { data } = await admin.from(target.table).select(`id, ${target.price}`).eq('id', id).eq(target.stateColumn, target.stateValue).single()
   if (!data) return { ok: false, error: 'The selected catalog item is no longer active.' }
   const row = data as unknown as Record<string, unknown>
   const livePrice = Number(row[target.price])
@@ -125,16 +126,18 @@ async function validateTargetAndPrice(admin: SupabaseClient, type: string, id: s
 }
 
 async function loadManagerCatalog(admin: SupabaseClient) {
-  const [rooms, experiences, tents, events] = await Promise.all([
+  const [rooms, experiences, tents, events, publicEvents] = await Promise.all([
     admin.from('rooms').select('id, room_number, room_type, price_per_night').eq('is_active', true).order('room_type'),
     admin.from('experiences').select('id, name, price').eq('is_active', true).order('name'),
     admin.from('tents').select('id, tent_name, price').eq('is_active', true).order('tent_name'),
     admin.from('event_spaces').select('id, space_name, price').eq('is_active', true).order('space_name'),
+    admin.from('public_events').select('id, title, ticket_price').eq('status', 'published').not('ticket_price', 'is', null).order('starts_at'),
   ])
   return [
     ...(rooms.data || []).map((item: { id: string; room_number: string; room_type: string; price_per_night: number }) => ({ id: item.id, type: 'room', name: `${item.room_type} — Room ${item.room_number}`, price: Number(item.price_per_night) })),
     ...(experiences.data || []).map((item: { id: string; name: string; price: number }) => ({ id: item.id, type: 'experience', name: item.name, price: Number(item.price) })),
     ...(tents.data || []).map((item: { id: string; tent_name: string; price: number }) => ({ id: item.id, type: 'tent', name: item.tent_name, price: Number(item.price) })),
     ...(events.data || []).map((item: { id: string; space_name: string; price: number }) => ({ id: item.id, type: 'event_space', name: item.space_name, price: Number(item.price) })),
+    ...(publicEvents.data || []).map((item: { id: string; title: string; ticket_price: number }) => ({ id: item.id, type: 'public_event', name: item.title, price: Number(item.ticket_price) })),
   ]
 }

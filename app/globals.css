@@ -189,6 +189,21 @@ body {
     background-color: #b8962f;
   }
 
+  .input {
+    margin-top: 0.25rem;
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid #d1d5db;
+    padding: 0.625rem 0.75rem;
+    color: #111827;
+    outline: none;
+  }
+
+  .input:focus {
+    border-color: #0A3D62;
+    box-shadow: 0 0 0 3px rgb(10 61 98 / 0.12);
+  }
+
   /* ===== ROOM GALLERY SCROLLBAR ===== */
   .scrollbar-thin::-webkit-scrollbar {
     height: 6px;

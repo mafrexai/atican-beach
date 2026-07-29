@@ -188,3 +188,28 @@ export interface GateEntry {
   verified_by: string | null
   notes: string | null
 }
+
+export type PublicEventStatus = 'draft' | 'published' | 'cancelled'
+
+export interface PublicEvent {
+  id: string
+  title: string
+  slug: string
+  summary: string
+  description: string
+  venue: string
+  starts_at: string
+  ends_at: string | null
+  recurrence_label: string | null
+  ticket_price: number | null
+  payment_url: string | null
+  cover_image_url: string | null
+  gallery_images: string[]
+  video_url: string | null
+  highlights: string[]
+  status: PublicEventStatus
+  is_featured: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}

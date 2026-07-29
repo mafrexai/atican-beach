@@ -9,7 +9,7 @@ import { useCartStore } from '@/stores/cartStore'
 interface Recommendation {
   id: string
   source: 'manager_offer' | 'catalog_recommendation'
-  type: 'room' | 'experience' | 'tent' | 'event_space'
+  type: 'room' | 'experience' | 'tent' | 'event_space' | 'public_event'
   title: string
   description: string
   itemName: string

@@ -1,5 +1,5 @@
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase/server'
-import type { Room, Tent, Experience, EventSpace, Booking, BookingItem, Profile } from '@/types/database'
+import type { Room, Tent, Experience, EventSpace, PublicEvent, Booking, BookingItem, Profile } from '@/types/database'
 
 // ========== ROOMS ==========
 
@@ -111,6 +111,56 @@ export async function getEventSpaces(): Promise<EventSpace[]> {
     return []
   }
   return data as EventSpace[]
+}
+
+// ========== PUBLIC EVENTS ==========
+
+export async function getPublicEvents(): Promise<PublicEvent[]> {
+  const supabase = await createServerSupabaseClient()
+  const { data, error } = await supabase
+    .from('public_events')
+    .select('*')
+    .eq('status', 'published')
+    .order('starts_at', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching public events:', error)
+    return []
+  }
+  return (data || []) as PublicEvent[]
+}
+
+export async function getPublicEventBySlug(slug: string): Promise<PublicEvent | null> {
+  const supabase = await createServerSupabaseClient()
+  const { data, error } = await supabase
+    .from('public_events')
+    .select('*')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching public event:', error)
+    return null
+  }
+  return (data || null) as PublicEvent | null
+}
+
+export async function getUpcomingPublicEvents(limit = 3): Promise<PublicEvent[]> {
+  const supabase = await createServerSupabaseClient()
+  const { data, error } = await supabase
+    .from('public_events')
+    .select('*')
+    .eq('status', 'published')
+    .gte('starts_at', new Date().toISOString())
+    .order('starts_at', { ascending: true })
+    .limit(limit)
+
+  if (error) {
+    console.error('Error fetching upcoming events:', error)
+    return []
+  }
+  return (data || []) as PublicEvent[]
 }
 
 // ========== BOOKINGS ==========

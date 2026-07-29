@@ -8,7 +8,7 @@ import {
   ArrowRight, CalendarDays, Clock3, MapPin, ShieldCheck,
   Sparkles, Star, Sun, Users, Waves,
 } from 'lucide-react'
-import { getFeaturedRooms } from '@/lib/supabase/queries'
+import { getFeaturedRooms, getUpcomingPublicEvents } from '@/lib/supabase/queries'
 
 const escapes = [
   { title: 'Stay by the ocean', copy: 'Wake to Atlantic light, soft linen and the hush of the tide.', href: '/rooms', image: room602OceanViewImage, eyebrow: 'Rooms & suites' },
@@ -24,7 +24,7 @@ const dayPlan = [
 ]
 
 export default async function HomePage() {
-  const featuredRooms = await getFeaturedRooms(3)
+  const [featuredRooms, upcomingEvents] = await Promise.all([getFeaturedRooms(3), getUpcomingPublicEvents(3)])
 
   return (
     <div className="overflow-hidden bg-[#FFFDF7] text-[#073B4C]">
@@ -62,6 +62,13 @@ export default async function HomePage() {
           <button type="submit" className="rounded-2xl bg-[#073B4C] px-7 py-4 text-sm font-bold text-white transition hover:bg-[#0F766E]">Check availability</button>
         </form>
       </section>
+
+      {upcomingEvents.length > 0 && <section className="bg-[#071f2b] px-5 py-24 text-white sm:px-8 lg:py-32">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end"><div><p className="text-xs font-bold uppercase tracking-[.24em] text-[#55d6be]">Live at Atican</p><h2 className="mt-4 font-display text-4xl sm:text-5xl">Your next night by the ocean</h2></div><Link href="/events" className="inline-flex items-center gap-2 text-sm font-bold">See all events <ArrowRight className="h-4 w-4" /></Link></div>
+          <div className="mt-12 grid gap-6 lg:grid-cols-3">{upcomingEvents.map((event, index) => <Link key={event.id} href={`/events/${event.slug}`} className={`group overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 ${index === 0 ? 'lg:col-span-2' : ''}`}><div className={`relative overflow-hidden ${index === 0 ? 'min-h-[520px]' : 'min-h-[360px]'}`}>{event.cover_image_url ? <Image src={event.cover_image_url} alt={event.title} fill className="object-cover transition duration-700 group-hover:scale-105" sizes={index === 0 ? '(max-width: 1024px) 100vw, 66vw' : '(max-width: 1024px) 100vw, 33vw'} /> : <div className="h-full bg-gradient-to-br from-[#0F766E] to-[#F47C5C]" />}<div className="absolute inset-0 bg-gradient-to-t from-[#061923] via-[#061923]/10 to-transparent" /><div className="absolute inset-x-0 bottom-0 p-7"><p className="text-xs font-black uppercase tracking-[.18em] text-[#ffd166]">{new Intl.DateTimeFormat('en-NG', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Africa/Lagos' }).format(new Date(event.starts_at))}</p><h3 className="mt-2 font-display text-3xl sm:text-4xl">{event.title}</h3><p className="mt-3 max-w-xl text-sm leading-6 text-white/65">{event.summary}</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-black">Get your ticket <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span></div></div></Link>)}</div>
+        </div>
+      </section>}
 
       <section className="px-5 py-24 sm:px-8 lg:py-32">
         <div className="mx-auto max-w-7xl">

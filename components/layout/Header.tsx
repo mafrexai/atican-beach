@@ -132,6 +132,7 @@ export function Header() {
             <Link href="/tents" className="text-gray-600 hover:text-[#0A3D62] transition-colors">Tents</Link>
             <Link href="/experiences" className="text-gray-600 hover:text-[#0A3D62] transition-colors">Experiences</Link>
             <Link href="/events" className="text-gray-600 hover:text-[#0A3D62] transition-colors">Events</Link>
+            <Link href="/beach-access" className="text-gray-600 hover:text-[#0A3D62] transition-colors">Beach Access</Link>
             <Link href="/dining" className="text-gray-600 hover:text-[#0A3D62] transition-colors">Dining</Link>
           </nav>
 
@@ -229,6 +230,7 @@ export function Header() {
             <Link href="/tents" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 text-gray-600 hover:bg-gray-50 rounded-lg text-sm">Tents</Link>
             <Link href="/experiences" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 text-gray-600 hover:bg-gray-50 rounded-lg text-sm">Experiences</Link>
             <Link href="/events" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 text-gray-600 hover:bg-gray-50 rounded-lg text-sm">Events</Link>
+            <Link href="/beach-access" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 text-gray-600 hover:bg-gray-50 rounded-lg text-sm">Beach Access</Link>
             <Link href="/dining" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2.5 text-gray-600 hover:bg-gray-50 rounded-lg text-sm">Dining</Link>
             {user && (
               <div className="border-t border-gray-100 pt-2 mt-2">

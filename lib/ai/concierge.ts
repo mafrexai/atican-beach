@@ -1,7 +1,7 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type ConciergeTargetType = 'room' | 'experience' | 'tent' | 'event_space'
+export type ConciergeTargetType = 'room' | 'experience' | 'tent' | 'event_space' | 'public_event'
 
 export interface ConciergeRecommendation {
   id: string
@@ -105,11 +105,12 @@ export async function getConciergeRecommendation(
 }
 
 async function loadCatalog(supabase: SupabaseClient): Promise<CatalogItem[]> {
-  const [roomsResult, experiencesResult, tentsResult, eventsResult] = await Promise.all([
+  const [roomsResult, experiencesResult, tentsResult, spacesResult, publicEventsResult] = await Promise.all([
     supabase.from('rooms').select('id, room_type, price_per_night').eq('is_active', true).eq('status', 'available'),
     supabase.from('experiences').select('id, name, description, price').eq('is_active', true),
     supabase.from('tents').select('id, tent_name, price, quantity_available').eq('is_active', true).gt('quantity_available', 0),
     supabase.from('event_spaces').select('id, space_name, description, price').eq('is_active', true),
+    supabase.from('public_events').select('id, title, slug, summary, ticket_price').eq('status', 'published').gte('starts_at', new Date().toISOString()).order('starts_at'),
   ])
 
   const rooms: CatalogItem[] = []
@@ -124,16 +125,19 @@ async function loadCatalog(supabase: SupabaseClient): Promise<CatalogItem[]> {
     ...rooms,
     ...(experiencesResult.data || []).map((item: { id: string; name: string; description: string | null; price: number }) => ({ id: item.id, type: 'experience' as const, name: item.name, description: item.description || '', price: Number(item.price), ctaLink: '/experiences' })),
     ...(tentsResult.data || []).map((item: { id: string; tent_name: string; price: number; quantity_available: number }) => ({ id: item.id, type: 'tent' as const, name: item.tent_name, description: `A verified event tent option with ${item.quantity_available} currently available.`, price: Number(item.price), ctaLink: '/tents' })),
-    ...(eventsResult.data || []).map((item: { id: string; space_name: string; description: string | null; price: number }) => ({ id: item.id, type: 'event_space' as const, name: item.space_name, description: item.description || '', price: Number(item.price), ctaLink: '/events' })),
+    ...(spacesResult.data || []).map((item: { id: string; space_name: string; description: string | null; price: number }) => ({ id: item.id, type: 'event_space' as const, name: item.space_name, description: item.description || '', price: Number(item.price), ctaLink: '/tents' })),
+    ...(publicEventsResult.data || []).filter((item: { ticket_price: number | null }) => item.ticket_price !== null).map((item: { id: string; title: string; slug: string; summary: string; ticket_price: number }) => ({ id: item.id, type: 'public_event' as const, name: item.title, description: item.summary, price: Number(item.ticket_price), ctaLink: `/events/${item.slug}` })),
   ].filter((item) => Number.isFinite(item.price) && item.price >= 0)
 }
 
 function chooseFallback(catalog: CatalogItem[], context: RecommendationContext): CatalogItem | null {
+  const upcomingEvent = catalog.find((item) => item.type === 'public_event')
+  if (upcomingEvent && (context.currentPage === '/' || context.currentPage.startsWith('/events'))) return upcomingEvent
   const preferredType: ConciergeTargetType = context.currentPage.startsWith('/rooms')
     ? 'experience'
     : context.currentPage.startsWith('/experiences')
       ? 'room'
-      : context.currentPage.startsWith('/tents') || context.currentPage.startsWith('/events')
+      : context.currentPage.startsWith('/tents')
         ? 'event_space'
         : context.cartItemTypes.includes('room')
           ? 'experience'
@@ -153,9 +157,9 @@ function audienceForPath(path: string): string {
 }
 
 function fallbackTitle(type: ConciergeTargetType): string {
-  return type === 'room' ? 'A room you may enjoy' : type === 'experience' ? 'Complete your stay' : type === 'tent' ? 'Plan your beach event' : 'An event space to consider'
+  return type === 'room' ? 'A room you may enjoy' : type === 'experience' ? 'Complete your stay' : type === 'tent' ? 'Plan your beach event' : type === 'public_event' ? 'Coming up at Atican' : 'A setup to consider'
 }
 
 function labelForType(type: ConciergeTargetType): string {
-  return type === 'event_space' ? 'event space' : type
+  return type === 'event_space' ? 'setup' : type === 'public_event' ? 'event' : type
 }

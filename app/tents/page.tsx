@@ -1,10 +1,11 @@
-import { getTents } from '@/lib/supabase/queries'
+import { getEventSpaces, getTents } from '@/lib/supabase/queries'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Tent, Users, ChevronRight, Armchair } from 'lucide-react'
+import { Tent, Users, ChevronRight, Armchair, Sparkles } from 'lucide-react'
 
 export default async function TentsPage() {
-  const tents = await getTents()
+  const [tents, eventSpaces] = await Promise.all([getTents(), getEventSpaces()])
+  const setupPackages = eventSpaces.filter((space) => /setup|event space/i.test(space.space_name))
 
   return (
     <div className="min-h-screen bg-[#F5F1E8]">
@@ -21,6 +22,13 @@ export default async function TentsPage() {
           </p>
         </div>
       </section>
+
+      {setupPackages.length > 0 && <section className="bg-white py-16">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mb-12 text-center"><p className="text-xs font-bold uppercase tracking-[.22em] text-[#F97316]">Complete the look</p><h2 className="mt-3 text-4xl font-bold text-[#082032]" style={{ fontFamily: 'var(--font-playfair)' }}>Beach Setup Packages</h2><p className="mx-auto mt-3 max-w-2xl text-gray-600">Add seating, tables and atmosphere to your tent booking with a setup sized for your celebration.</p></div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">{setupPackages.map((setup) => <article key={setup.id} className="rounded-2xl border border-amber-100 bg-[#FFFDF7] p-6 shadow-sm"><Sparkles className="h-7 w-7 text-[#F97316]" /><h3 className="mt-4 text-lg font-bold text-[#082032]">{setup.space_name}</h3><p className="mt-2 min-h-12 text-sm leading-6 text-gray-500">{setup.description}</p><div className="mt-4 flex flex-wrap gap-2 text-xs text-[#0A3D62]">{setup.capacity_chairs ? <span className="rounded-full bg-[#0A3D62]/10 px-2.5 py-1">{setup.capacity_chairs} chairs</span> : null}{setup.capacity_tables ? <span className="rounded-full bg-[#0A3D62]/10 px-2.5 py-1">{setup.capacity_tables} tables</span> : null}</div><p className="mt-5 text-xl font-bold text-[#D4AF37]">₦{Number(setup.price).toLocaleString('en-NG')}</p></article>)}</div>
+        </div>
+      </section>}
 
       {/* Tents Grid */}
       <section className="py-16">

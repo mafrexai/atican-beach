@@ -1,97 +1,79 @@
-import { getEventSpaces } from '@/lib/supabase/queries'
+/* eslint-disable react-hooks/purity */
+import Image from 'next/image'
 import Link from 'next/link'
-import { CalendarDays, Users, ChevronRight, Camera, Video, Armchair, Music } from 'lucide-react'
+import { ArrowRight, CalendarDays, Music2, Sparkles } from 'lucide-react'
+import { getPublicEvents } from '@/lib/supabase/queries'
+import type { PublicEvent } from '@/types/database'
 
-const spaceIcons: Record<string, typeof Camera> = {
-  'Photo Shoot': Camera,
-  'Video Shoot': Video,
-  'VIP Event Space': Music,
-  'Small Setup': Armchair,
-  'Medium Setup': Armchair,
-  'Large Setup': Users,
-  'XL Setup': Users,
-}
+export const dynamic = 'force-dynamic'
 
 export default async function EventsPage() {
-  const eventSpaces = await getEventSpaces()
+  const events = await getPublicEvents()
+  const now = Date.now()
+  const upcoming = events.filter((event) => new Date(event.ends_at || event.starts_at).getTime() >= now)
+  const past = events.filter((event) => new Date(event.ends_at || event.starts_at).getTime() < now).reverse()
+  const featured = upcoming.find((event) => event.is_featured) || upcoming[0]
 
   return (
-    <div className="min-h-screen bg-[#F5F1E8]">
-      {/* Hero */}
-      <section className="relative py-28 bg-gradient-to-r from-[#0A3D62] to-[#082032] text-white">
-        <div className="absolute inset-0 bg-[url('/hero-beach.jpg')] bg-cover bg-center opacity-15" />
-        <div className="relative max-w-7xl mx-auto px-4 text-center animate-fade-in">
-          <CalendarDays className="w-16 h-16 mx-auto mb-4 text-[#D4AF37]" />
-          <h1 className="text-5xl font-bold mb-4" style={{ fontFamily: 'var(--font-playfair)' }}>
-            Event Spaces
-          </h1>
-          <p className="text-xl text-blue-200 max-w-2xl mx-auto">
-            Host your special occasions in our stunning beachfront event venues
-          </p>
+    <main className="min-h-screen overflow-hidden bg-[#071f2b] text-white">
+      <section className="relative min-h-[700px]">
+        {featured?.cover_image_url ? (
+          <Image src={featured.cover_image_url} alt={featured.title} fill priority className="object-cover object-center opacity-55" sizes="100vw" />
+        ) : (
+          <Image src="/images/home/burn-fire2.png" alt="A live beach event at Atican" fill priority className="object-cover opacity-50" sizes="100vw" />
+        )}
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,25,34,.98)_0%,rgba(4,25,34,.78)_48%,rgba(4,25,34,.2)_100%)]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#071f2b] via-transparent to-[#071f2b]/20" />
+        <div className="relative mx-auto flex min-h-[700px] max-w-7xl items-center px-5 py-24 sm:px-8">
+          <div className="max-w-3xl">
+            <p className="inline-flex items-center gap-2 rounded-full border border-[#f4b942]/30 bg-[#f4b942]/10 px-4 py-2 text-xs font-bold uppercase tracking-[.22em] text-[#ffd77a]">
+              <Sparkles className="h-4 w-4" /> Atican after dark
+            </p>
+            <h1 className="mt-6 font-display text-5xl leading-[.98] sm:text-7xl">Where Lagos comes alive by the ocean.</h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/70">Discover live music, beach celebrations and signature Atican moments. Find your next night out and secure your ticket in minutes.</p>
+            {featured && (
+              <div className="mt-9 flex flex-col gap-4 sm:flex-row">
+                <Link href={`/events/${featured.slug}`} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#f45b69] px-7 py-4 text-sm font-bold shadow-[0_18px_45px_rgba(244,91,105,.3)] transition hover:-translate-y-0.5">
+                  Get your ticket <ArrowRight className="h-4 w-4" />
+                </Link>
+                <p className="flex items-center gap-2 text-sm text-white/75"><CalendarDays className="h-4 w-4 text-[#ffd166]" />{formatDate(featured.starts_at)}</p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
-      {/* Event Spaces */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-[#082032] mb-4" style={{ fontFamily: 'var(--font-playfair)' }}>Our Venues</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">From intimate gatherings to grand celebrations, we have the perfect space for you</p>
+      <section className="px-5 py-24 sm:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+            <div><p className="text-xs font-bold uppercase tracking-[.24em] text-[#55d6be]">Coming up</p><h2 className="mt-3 font-display text-4xl sm:text-5xl">Your next unforgettable night</h2></div>
+            <p className="max-w-lg text-sm leading-6 text-white/55">Official event details and verified MafrexPay ticket links, published directly by Atican management.</p>
           </div>
-
-          {eventSpaces.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No event spaces available at the moment.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {eventSpaces.map((space) => {
-                const Icon = spaceIcons[space.space_name] || CalendarDays
-                return (
-                  <div
-                    key={space.id}
-                    className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
-                  >
-                    <div className="h-48 bg-gradient-to-br from-[#0A3D62] to-[#08324f] flex items-center justify-center">
-                      <Icon className="w-16 h-16 text-white/50" />
-                    </div>
-                    <div className="p-5">
-                      <h3 className="font-bold text-[#082032] text-lg mb-1">{space.space_name}</h3>
-                      <p className="text-sm text-gray-500 mb-3">{space.description}</p>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {space.capacity_chairs && (
-                          <span className="text-xs bg-[#0A3D62]/10 text-[#0A3D62] px-2 py-1 rounded-full flex items-center gap-1">
-                            <Users className="w-3 h-3" /> {space.capacity_chairs} chairs
-                          </span>
-                        )}
-                        {space.capacity_tables && (
-                          <span className="text-xs bg-[#0A3D62]/10 text-[#0A3D62] px-2 py-1 rounded-full">
-                            {space.capacity_tables} tables
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[#0A3D62] font-bold">
-                        ₦{space.price.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+          {upcoming.length ? <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">{upcoming.map((event) => <EventCard key={event.id} event={event} />)}</div> : (
+            <div className="mt-12 rounded-[2rem] border border-white/10 bg-white/5 p-12 text-center"><Music2 className="mx-auto h-10 w-10 text-[#ffd166]" /><h3 className="mt-4 font-display text-2xl">The next experience is being prepared</h3><p className="mt-2 text-white/55">Check back soon for newly announced beach events.</p></div>
           )}
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-16 bg-gradient-to-r from-[#0A3D62] to-[#082032]">
-        <div className="max-w-4xl mx-auto px-4 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: 'var(--font-playfair)' }}>Plan Your Event</h2>
-          <p className="text-lg text-blue-100 mb-8">Contact us to discuss your event requirements and get a custom quote.</p>
-          <Link href="/contact" className="bg-[#D4AF37] text-[#082032] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#b8962f] transition-colors inline-flex items-center gap-2">
-            Get in Touch <ChevronRight className="w-5 h-5" />
-          </Link>
-        </div>
-      </section>
-    </div>
+      {past.length > 0 && <section className="border-t border-white/10 bg-[#061923] px-5 py-24 sm:px-8"><div className="mx-auto max-w-7xl"><p className="text-xs font-bold uppercase tracking-[.24em] text-[#f45b69]">Past moments</p><h2 className="mt-3 font-display text-4xl">The nights we still talk about</h2><div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">{past.map((event) => <EventCard key={event.id} event={event} past />)}</div></div></section>}
+    </main>
   )
+}
+
+function EventCard({ event, past = false }: { event: PublicEvent; past?: boolean }) {
+  return <article className="group overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[.06] shadow-2xl">
+    <Link href={`/events/${event.slug}`} className="block">
+      <div className="relative aspect-[4/5] overflow-hidden">
+        {event.cover_image_url ? <Image src={event.cover_image_url} alt={event.title} fill className={`object-cover transition duration-700 group-hover:scale-105 ${past ? 'grayscale-[35%]' : ''}`} sizes="(max-width: 768px) 100vw, 33vw" /> : <div className="h-full bg-gradient-to-br from-[#0f766e] to-[#f45b69]" />}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#061923] via-transparent to-transparent" />
+        <span className="absolute left-5 top-5 rounded-full bg-[#ffd166] px-3 py-1.5 text-[10px] font-black uppercase tracking-[.16em] text-[#071f2b]">{past ? 'Past event' : event.recurrence_label || 'Upcoming'}</span>
+        <div className="absolute inset-x-0 bottom-0 p-6"><p className="text-xs font-bold uppercase tracking-[.16em] text-[#55d6be]">{formatDate(event.starts_at)}</p><h3 className="mt-2 font-display text-3xl">{event.title}</h3></div>
+      </div>
+      <div className="p-6"><p className="line-clamp-2 text-sm leading-6 text-white/60">{event.summary}</p><div className="mt-5 flex items-center justify-between"><p className="font-bold text-[#ffd166]">{event.ticket_price === null ? 'Details inside' : event.ticket_price === 0 ? 'Free entry' : `₦${Number(event.ticket_price).toLocaleString('en-NG')}`}</p><span className="inline-flex items-center gap-1 text-sm font-bold">{past ? 'Relive it' : 'Get your ticket'} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span></div></div>
+    </Link>
+  </article>
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('en-NG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Africa/Lagos' }).format(new Date(value))
 }

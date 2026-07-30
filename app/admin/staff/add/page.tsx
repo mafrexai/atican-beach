@@ -35,8 +35,9 @@ export default function AddStaffPage() {
     setCreatedCredentials(null)
 
     // Validate email domain
-    if (!email.endsWith('@aticanbeach.com')) {
-      setError('Email must end with @aticanbeach.com')
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail.endsWith('@aticanbeachresort.com')) {
+      setError('Email must end with @aticanbeachresort.com')
       setLoading(false)
       return
     }
@@ -47,7 +48,7 @@ export default function AddStaffPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
-          email,
+          email: normalizedEmail,
           password: password || undefined,
           role,
         }),
@@ -67,8 +68,8 @@ export default function AddStaffPage() {
       setEmail('')
       setPassword('')
       setRole('front_desk')
-    } catch (err: any) {
-      setError(err.message || 'Failed to create staff account')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create staff account')
     } finally {
       setLoading(false)
     }
@@ -99,7 +100,7 @@ export default function AddStaffPage() {
               <p className="text-xs text-gray-500 mb-1">Login Credentials:</p>
               <p className="text-sm text-gray-900"><span className="font-medium">Email:</span> {createdCredentials.email}</p>
               <p className="text-sm text-gray-900"><span className="font-medium">Password:</span> {createdCredentials.password}</p>
-              <p className="text-xs text-orange-600 mt-2">âš ï¸ Copy this password now. It won't be shown again.</p>
+              <p className="mt-2 text-xs text-orange-600">Copy this password now. It won&apos;t be shown again.</p>
             </div>
           )}
         </div>
@@ -116,7 +117,7 @@ export default function AddStaffPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#0A3D62]"
             placeholder="e.g., Emily Johnson"
             required
           />
@@ -132,11 +133,11 @@ export default function AddStaffPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm"
-            placeholder="emily@aticanbeach.com"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#0A3D62]"
+            placeholder="emily@aticanbeachresort.com"
             required
           />
-          <p className="text-xs text-gray-500 mt-1">Must end with @aticanbeach.com</p>
+          <p className="mt-1 text-xs text-gray-500">Must end with @aticanbeachresort.com</p>
         </div>
 
         {/* Password */}
@@ -151,7 +152,7 @@ export default function AddStaffPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm pr-10"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#0A3D62]"
                 placeholder="Leave blank for auto-generated"
               />
               <button
@@ -181,10 +182,11 @@ export default function AddStaffPage() {
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as 'front_desk' | 'admin' | 'manager')}
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A3D62] focus:border-transparent text-sm"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#0A3D62]"
           >
             <option value="front_desk">Front Desk</option>
-            <option value="manager">Manager</option>\n            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+            <option value="admin">Admin</option>
           </select>
           <p className="text-xs text-gray-500 mt-1">
             {role === 'front_desk'

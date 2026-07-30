@@ -15,6 +15,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name, email, and role are required' }, { status: 400 })
     }
 
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail.endsWith('@aticanbeachresort.com')) {
+      return NextResponse.json({ error: 'Email must end with @aticanbeachresort.com' }, { status: 400 })
+    }
+
     // Use server client to read user session from cookies
     const serverSupabase = await createServerSupabaseClient()
     const { data: { user } } = await serverSupabase.auth.getUser()
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await supabase
       .from('user_roles')
       .select('id')
-      .eq('staff_email', email)
+      .eq('staff_email', normalizedEmail)
       .single()
 
     if (existing) {
@@ -51,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Create auth user
     const { data: newUser, error: authError } = await supabase.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password: finalPassword,
       email_confirm: true,
       user_metadata: { full_name: name },
@@ -70,7 +75,7 @@ export async function POST(request: NextRequest) {
           user_id: newUser.user.id,
           role,
           staff_name: name,
-          staff_email: email,
+          staff_email: normalizedEmail,
           is_active: true,
           hire_date: new Date().toISOString().split('T')[0],
         },
@@ -95,7 +100,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Staff account created successfully',
       credentials: {
-        email,
+        email: normalizedEmail,
         password: finalPassword,
       },
     })

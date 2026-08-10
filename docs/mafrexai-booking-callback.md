@@ -53,3 +53,6 @@ The receiver implements the callback body documented at `/developers/property-sy
 - `500`, `503`: temporary receiver failure; retry is safe.
 
 MafrexAI should treat every `2xx` response as delivered. Atican stores and deduplicates the stable `X-MafrexAI-Delivery` value.
+
+
+added so trivial change for push

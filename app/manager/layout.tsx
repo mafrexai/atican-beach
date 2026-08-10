@@ -1,5 +1,6 @@
 ﻿"use client"
 
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState, useMemo } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -17,6 +18,7 @@ import {
   Wrench,
   BadgePercent,
   CalendarDays,
+  RefreshCw,
 } from "lucide-react"
 import DashboardAutoRefresh from "@/components/dashboard/DashboardAutoRefresh"
 
@@ -29,6 +31,7 @@ const managerNavItems = [
   { name: "Maintenance", href: "/manager/maintenance", icon: Wrench },
   { name: "Concierge Offers", href: "/manager/offers", icon: BadgePercent },
   { name: "Public Events", href: "/manager/events", icon: CalendarDays },
+  { name: "Property Sync", href: "/manager/property-sync", icon: RefreshCw },
 ]
 
 export default function ManagerLayout({

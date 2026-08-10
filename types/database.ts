@@ -116,6 +116,8 @@ export interface Booking {
   checked_out_at: string | null
   confirmed_by: string | null
   booking_type: 'online' | 'walk_in'
+  external_source?: string | null
+  external_booking_id?: string | null
 }
 
 export interface BookingItem {

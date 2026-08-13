@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import SettingsForm from '@/components/admin/SettingsForm'
+import TestPaymentCard from '@/components/admin/TestPaymentCard'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 export default async function AdminSettingsPage() {
@@ -10,5 +11,10 @@ export default async function AdminSettingsPage() {
     redirect('/admin/login')
   }
 
-  return <SettingsForm />
+  return (
+    <div className="space-y-6">
+      <SettingsForm />
+      <TestPaymentCard />
+    </div>
+  )
 }

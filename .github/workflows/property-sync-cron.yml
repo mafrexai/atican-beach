@@ -12,7 +12,13 @@ jobs:
     steps:
       - name: Sync bookings
         if: github.event.schedule == '*/10 * * * *' || github.event_name == 'workflow_dispatch'
-        run: curl -sf -X GET "https://www.aticanbeachresort.com/api/cron/property-sync-bookings" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -sf -X GET "https://www.aticanbeachresort.com/api/cron/property-sync-bookings" -H "Authorization: Bearer $CRON_SECRET"
       - name: Sync checkins
         if: github.event.schedule == '5-59/10 * * * *' || github.event_name == 'workflow_dispatch'
-        run: curl -sf -X GET "https://www.aticanbeachresort.com/api/cron/property-sync-checkins" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -sf -X GET "https://www.aticanbeachresort.com/api/cron/property-sync-checkins" -H "Authorization: Bearer $CRON_SECRET"

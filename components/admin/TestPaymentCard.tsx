@@ -17,10 +17,10 @@ export default function TestPaymentCard() {
     const returned = params.get('test_payment')
     if (returned) {
       setReference(returned)
-      setStatus('awaiting')
-      setMessage('You are back from checkout. Click "Check payment status" to confirm it went through.')
       window.history.replaceState({}, '', window.location.pathname)
+      void checkStatus(returned)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- checkStatus is stable enough for this one-shot mount check
   }, [])
 
   async function runTestPayment() {
@@ -64,15 +64,16 @@ export default function TestPaymentCard() {
     }
   }
 
-  async function checkStatus() {
-    if (!reference) return
+  async function checkStatus(referenceOverride?: string) {
+    const target = referenceOverride || reference
+    if (!target) return
     setStatus('checking')
     setMessage('')
     try {
       const response = await fetch('/api/payments/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference }),
+        body: JSON.stringify({ reference: target }),
       })
       const data = await response.json()
       if (response.status === 409) {
@@ -114,7 +115,7 @@ export default function TestPaymentCard() {
         {reference && (
           <button
             type="button"
-            onClick={checkStatus}
+            onClick={() => checkStatus()}
             disabled={busy}
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >

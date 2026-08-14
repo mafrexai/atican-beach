@@ -1,8 +1,9 @@
 'use client'
+/* eslint-disable react-hooks/set-state-in-effect -- checked-in guests are loaded from the authenticated API after mount */
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Search, LogIn, LogOut, CheckCircle2, AlertCircle, User, Mail } from 'lucide-react'
+import { Search, LogIn, LogOut, CheckCircle2, AlertCircle, User, Mail, DoorOpen } from 'lucide-react'
 
 interface Booking {
   id: string
@@ -23,6 +24,8 @@ interface Booking {
   room_details?: Array<{ id: string; room_number: string; room_type: string }>
 }
 
+const CHECKED_IN_POLL_MS = 30_000
+
 export default function StaffCheckInPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Booking[]>([])
@@ -31,6 +34,43 @@ export default function StaffCheckInPage() {
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  const [checkedInGuests, setCheckedInGuests] = useState<Booking[]>([])
+  const [checkingOutId, setCheckingOutId] = useState<string | null>(null)
+
+  const loadCheckedIn = useCallback(async () => {
+    try {
+      const response = await fetch('/api/staff/stays?checkedIn=1', { cache: 'no-store' })
+      const data = await response.json()
+      if (response.ok) setCheckedInGuests(data.bookings || [])
+    } catch {
+      // Silent — this is a background refresh, not a user-initiated action.
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadCheckedIn()
+    const interval = setInterval(loadCheckedIn, CHECKED_IN_POLL_MS)
+    return () => clearInterval(interval)
+  }, [loadCheckedIn])
+
+  const checkOutFromList = async (booking: Booking) => {
+    setCheckingOutId(booking.id)
+    setError('')
+    setSuccess('')
+    try {
+      const response = await fetch('/api/staff/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.id, action: 'check_out' }) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Failed to check out')
+      setSuccess(`Checked out successfully! Guest: ${booking.guest_name}`)
+      await loadCheckedIn()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to check out')
+    } finally {
+      setCheckingOutId(null)
+    }
+  }
 
   // Search for bookings
   const handleSearch = async () => {
@@ -86,6 +126,7 @@ export default function StaffCheckInPage() {
         checked_in_at: processedAt,
         status: 'confirmed',
       })
+      await loadCheckedIn()
     } catch (err: unknown) {
       console.error('Check-in error:', err)
       setError(err instanceof Error ? err.message : 'Failed to check in')
@@ -115,6 +156,7 @@ export default function StaffCheckInPage() {
         checked_out_at: processedAt,
         status: 'completed',
       })
+      await loadCheckedIn()
     } catch (err: unknown) {
       console.error('Check-out error:', err)
       setError(err instanceof Error ? err.message : 'Failed to check out')
@@ -170,6 +212,65 @@ export default function StaffCheckInPage() {
           <p className="text-sm text-green-700">{success}</p>
         </div>
       )}
+
+      {/* Currently checked in */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900">
+            <DoorOpen className="w-5 h-5 inline mr-2" />
+            Currently Checked In
+          </h2>
+          <p className="text-sm text-gray-500">{checkedInGuests.length} guest{checkedInGuests.length === 1 ? '' : 's'} in-house</p>
+        </div>
+        {checkedInGuests.length === 0 ? (
+          <p className="px-5 py-6 text-center text-sm text-gray-400">No guests currently checked in.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-400">
+                  <th className="px-5 py-2 font-medium">Guest</th>
+                  <th className="px-5 py-2 font-medium">Room</th>
+                  <th className="px-5 py-2 font-medium">Check-out due</th>
+                  <th className="px-5 py-2 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {checkedInGuests.map((guest) => {
+                  const overdue = Boolean(guest.check_out_date && guest.check_out_date < format(new Date(), 'yyyy-MM-dd'))
+                  return (
+                    <tr key={guest.id}>
+                      <td className="px-5 py-3">
+                        <p className="font-medium text-gray-900">{guest.guest_name}</p>
+                        <p className="text-xs text-gray-500">{guest.booking_reference}</p>
+                      </td>
+                      <td className="px-5 py-3 text-gray-700">
+                        {guest.room_details?.map((room) => room.room_number).join(', ') || '—'}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className={overdue ? 'font-medium text-red-600' : 'text-gray-700'}>
+                          {guest.check_out_date ? format(parseISO(guest.check_out_date), 'MMM d, yyyy') : '—'}
+                          {' '}<span className="text-xs text-gray-400">(by 12:00 PM)</span>
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          onClick={() => checkOutFromList(guest)}
+                          disabled={checkingOutId === guest.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <LogOut className="h-3.5 w-3.5" />
+                          {checkingOutId === guest.id ? 'Checking out…' : 'Check Out'}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Search */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">

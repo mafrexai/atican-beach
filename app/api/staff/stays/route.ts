@@ -14,14 +14,22 @@ interface RoomRow { id: string; room_number: string; room_type: string }
 export async function GET(request: NextRequest) {
   const auth = await authorizeFrontDesk(); if (!auth.ok) return auth.response
   const query = request.nextUrl.searchParams.get('query')?.trim()
-  if (!query || query.length < 2 || query.length > 150) {
-    return NextResponse.json({ error: 'Enter a booking reference or guest email.' }, { status: 400 })
-  }
+  const listCheckedIn = request.nextUrl.searchParams.get('checkedIn') === '1'
 
-  let bookingsQuery = auth.admin.from('bookings').select('*').order('created_at', { ascending: false }).limit(10)
-  bookingsQuery = query.toUpperCase().startsWith('AB-') || query.toUpperCase().startsWith('ATC-')
-    ? bookingsQuery.ilike('booking_reference', query)
-    : bookingsQuery.ilike('guest_email', `%${query.replace(/[%_,()]/g, '')}%`)
+  let bookingsQuery
+  if (listCheckedIn) {
+    bookingsQuery = auth.admin.from('bookings').select('*')
+      .not('checked_in_at', 'is', null).is('checked_out_at', null)
+      .order('check_out_date', { ascending: true }).limit(100)
+  } else {
+    if (!query || query.length < 2 || query.length > 150) {
+      return NextResponse.json({ error: 'Enter a booking reference or guest email.' }, { status: 400 })
+    }
+    bookingsQuery = auth.admin.from('bookings').select('*').order('created_at', { ascending: false }).limit(10)
+    bookingsQuery = query.toUpperCase().startsWith('AB-') || query.toUpperCase().startsWith('ATC-')
+      ? bookingsQuery.ilike('booking_reference', query)
+      : bookingsQuery.ilike('guest_email', `%${query.replace(/[%_,()]/g, '')}%`)
+  }
   const { data, error } = await bookingsQuery
   if (error) return NextResponse.json({ error: 'Unable to search bookings right now.' }, { status: 500 })
   const bookings = (data || []) as BookingRow[]

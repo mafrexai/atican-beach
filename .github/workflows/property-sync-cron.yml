@@ -28,3 +28,9 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           curl -sf -X GET "https://www.aticanbeachresort.com/api/cron/reconcile-pending-payments" -H "Authorization: Bearer $CRON_SECRET"
+      - name: Notify staff of new bookings
+        if: github.event.schedule == '*/10 * * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -sf -X GET "https://www.aticanbeachresort.com/api/cron/notify-staff-new-bookings" -H "Authorization: Bearer $CRON_SECRET"

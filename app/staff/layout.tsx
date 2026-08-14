@@ -15,6 +15,7 @@ import {
   ClipboardList,
 } from 'lucide-react'
 import DashboardAutoRefresh from '@/components/dashboard/DashboardAutoRefresh'
+import NotificationBell from '@/components/staff/NotificationBell'
 
 const staffNavItems = [
   { name: 'Dashboard', href: '/staff/dashboard', icon: LayoutDashboard },
@@ -90,6 +91,7 @@ export default function StaffLayout({
   return (
     <div className="min-h-screen bg-gray-100">
       <DashboardAutoRefresh />
+      <NotificationBell />
       {/* Mobile sidebar toggle */}
       <button
         onClick={() => setSidebarOpen(true)}

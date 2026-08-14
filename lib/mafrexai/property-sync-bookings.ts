@@ -13,9 +13,10 @@ interface BookingRow {
   status: string
   payment_status: string
   payment_provider: string | null
+  booking_type: string | null
 }
 
-interface RoomItemRow { booking_id: string; item_id: string }
+interface RoomItemRow { booking_id: string; item_id: string; metadata: { duration_minutes?: number } | null }
 
 export interface BookingPayloadResult {
   external_source: string
@@ -26,7 +27,7 @@ export interface BookingPayloadResult {
 
 export async function buildActiveBookingPayload(admin: SupabaseClient): Promise<BookingPayloadResult> {
   const today = new Date().toISOString().slice(0, 10)
-  const { data, error } = await admin.from('bookings').select('id, guest_name, guest_email, guest_phone, check_in_date, check_out_date, total_amount, status, payment_status, payment_provider')
+  const { data, error } = await admin.from('bookings').select('id, guest_name, guest_email, guest_phone, check_in_date, check_out_date, total_amount, status, payment_status, payment_provider, booking_type')
     .in('status', ['pending', 'confirmed']).gte('check_out_date', today).order('check_in_date')
   if (error) throw new Error(`Unable to load active Atican bookings: ${error.message}`)
   return buildPayload(admin, (data || []) as BookingRow[])
@@ -34,7 +35,7 @@ export async function buildActiveBookingPayload(admin: SupabaseClient): Promise<
 
 export async function buildBookingPayloadByIds(admin: SupabaseClient, bookingIds: string[]): Promise<BookingPayloadResult> {
   if (!bookingIds.length) return emptyPayload()
-  const { data, error } = await admin.from('bookings').select('id, guest_name, guest_email, guest_phone, check_in_date, check_out_date, total_amount, status, payment_status, payment_provider').in('id', bookingIds)
+  const { data, error } = await admin.from('bookings').select('id, guest_name, guest_email, guest_phone, check_in_date, check_out_date, total_amount, status, payment_status, payment_provider, booking_type').in('id', bookingIds)
   if (error) throw new Error(`Unable to load queued Atican bookings: ${error.message}`)
   const found = new Set((data || []).map((booking) => booking.id))
   const result = await buildPayload(admin, (data || []) as BookingRow[])
@@ -45,18 +46,19 @@ export async function buildBookingPayloadByIds(admin: SupabaseClient, bookingIds
 async function buildPayload(admin: SupabaseClient, bookings: BookingRow[]): Promise<BookingPayloadResult> {
   if (!bookings.length) return emptyPayload()
   const ids = bookings.map((booking) => booking.id)
-  const { data: items, error } = await admin.from('booking_items').select('booking_id, item_id').in('booking_id', ids).eq('item_type', 'room')
+  const { data: items, error } = await admin.from('booking_items').select('booking_id, item_id, metadata').in('booking_id', ids).eq('item_type', 'room')
   if (error) throw new Error(`Unable to load booking room assignments: ${error.message}`)
-  const roomByBooking = new Map(((items || []) as RoomItemRow[]).map((item) => [item.booking_id, item.item_id]))
+  const itemByBooking = new Map(((items || []) as RoomItemRow[]).map((item) => [item.booking_id, item]))
   const payload = emptyPayload()
 
   for (const booking of bookings) {
-    const roomId = roomByBooking.get(booking.id)
-    if (!roomId) { payload.skipped.push({ bookingId: booking.id, reason: 'No room is assigned to this booking.' }); continue }
+    const item = itemByBooking.get(booking.id)
+    if (!item) { payload.skipped.push({ bookingId: booking.id, reason: 'No room is assigned to this booking.' }); continue }
     if (!booking.check_in_date || !booking.check_out_date) { payload.skipped.push({ bookingId: booking.id, reason: 'Stay dates are incomplete.' }); continue }
+    const isShortRest = booking.booking_type === 'short_rest'
     payload.bookings.push({
       external_booking_id: booking.id,
-      external_room_id: roomId,
+      external_room_id: item.item_id,
       guest_name: booking.guest_name,
       guest_email: booking.guest_email,
       guest_phone: booking.guest_phone || undefined,
@@ -66,6 +68,8 @@ async function buildPayload(admin: SupabaseClient, bookings: BookingRow[]): Prom
       status: booking.status,
       payment_status: booking.payment_status,
       payment_method: booking.payment_provider || 'paystack',
+      booking_type: booking.booking_type || 'online',
+      ...(isShortRest ? { duration_minutes: item.metadata?.duration_minutes } : {}),
     })
     payload.includedIds.push(booking.id)
   }

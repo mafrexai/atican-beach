@@ -19,7 +19,7 @@ const createSchema = z.object({
 interface RoomRow { id: string; room_number: string; room_type: string; status: string; housekeeping_status: string }
 interface ShortRestRow {
   id: string; room_id: string; booking_id: string; price: number; duration_minutes: number
-  started_at: string; ends_at: string; status: string
+  started_at: string | null; ends_at: string | null; status: string
 }
 interface BookingRow { id: string; guest_name: string; guest_phone: string | null; guest_email: string; payment_status: string; booking_reference: string }
 interface OccupiedRoomRow { item_id: string }
@@ -30,7 +30,7 @@ export async function GET() {
   const [roomsResult, activeRestsResult, occupiedResult] = await Promise.all([
     auth.admin.from('rooms').select('id, room_number, room_type, status, housekeeping_status')
       .eq('is_active', true).eq('status', 'available').eq('housekeeping_status', 'available').order('room_number'),
-    auth.admin.from('room_short_rests').select('id, room_id, booking_id, price, duration_minutes, started_at, ends_at, status').eq('status', 'active'),
+    auth.admin.from('room_short_rests').select('id, room_id, booking_id, price, duration_minutes, started_at, ends_at, status').in('status', ['active', 'pending_payment']),
     auth.admin.from('booking_items').select('item_id, bookings!inner(checked_in_at, checked_out_at)').eq('item_type', 'room')
       .not('bookings.checked_in_at', 'is', null).is('bookings.checked_out_at', null),
   ])

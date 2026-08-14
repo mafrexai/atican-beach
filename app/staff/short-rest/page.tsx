@@ -9,7 +9,7 @@ interface Room { id: string; room_number: string; room_type: string }
 interface Booking { id: string; guest_name: string; guest_phone: string | null; guest_email: string; payment_status: string; booking_reference: string }
 interface ShortRest {
   id: string; room_id: string; booking_id: string; price: number; duration_minutes: number
-  started_at: string; ends_at: string; status: string; booking: Booking | null
+  started_at: string | null; ends_at: string | null; status: string; booking: Booking | null
 }
 
 const POLL_INTERVAL_MS = 15_000
@@ -249,7 +249,7 @@ export default function ShortRestPage() {
         </form>
 
         <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">Active short rests</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">Room short rests</h2>
           {shortRests.length === 0 && <p className="py-6 text-center text-sm text-gray-400">No rooms currently on short rest.</p>}
           <div className="space-y-3">
             {shortRests.map((rest) => (
@@ -263,9 +263,10 @@ export default function ShortRestPage() {
 }
 
 function ShortRestRow({ rest, now, onEnd }: { rest: ShortRest; now: number; onEnd: () => void }) {
-  const remainingMs = useMemo(() => new Date(rest.ends_at).getTime() - now, [rest.ends_at, now])
-  const expired = remainingMs <= 0
-  const label = expired ? 'Ending…' : formatDuration(remainingMs)
+  const pendingPayment = rest.status === 'pending_payment'
+  const remainingMs = useMemo(() => (rest.ends_at ? new Date(rest.ends_at).getTime() - now : 0), [rest.ends_at, now])
+  const expired = !pendingPayment && remainingMs <= 0
+  const label = pendingPayment ? 'Awaiting payment' : expired ? 'Ending…' : formatDuration(remainingMs)
 
   return (
     <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 p-3">
@@ -277,12 +278,12 @@ function ShortRestRow({ rest, now, onEnd }: { rest: ShortRest; now: number; onEn
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${expired ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+        <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${pendingPayment ? 'bg-blue-100 text-blue-700' : expired ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
           <Timer className="h-3.5 w-3.5" />
           {label}
         </div>
         <button type="button" onClick={onEnd} className="flex items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100">
-          <Clock className="h-3.5 w-3.5" /> End now
+          <Clock className="h-3.5 w-3.5" /> {pendingPayment ? 'Cancel' : 'End now'}
         </button>
       </div>
     </div>

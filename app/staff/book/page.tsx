@@ -1,9 +1,11 @@
 ﻿'use client'
+/* eslint-disable react-hooks/set-state-in-effect -- one-shot check of the return-from-checkout URL param after mount */
 
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, addDays, differenceInDays } from 'date-fns'
-import { CalendarDays, User, Mail, Phone, BedDouble, Tent, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react'
+import QRCode from 'react-qr-code'
+import { CalendarDays, User, Mail, Phone, BedDouble, Tent, Sparkles, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react'
 
 interface Room {
   id: string
@@ -66,6 +68,8 @@ export default function StaffBookPage() {
 
   // Payment state
   const [paymentStatus, setPaymentStatus] = useState<'unpaid' | 'processing' | 'paid'>('unpaid');
+  const [checkoutQr, setCheckoutQr] = useState<{ reference: string; url: string } | null>(null)
+  const [verifying, setVerifying] = useState(false)
 
   // Calculate number of nights for room pricing
   const numberOfNights = Math.max(1, differenceInDays(new Date(checkOutDate), new Date(checkInDate)))
@@ -91,41 +95,36 @@ export default function StaffBookPage() {
     fetchItems()
   }, [])
 
-  // Handle Paystack payment callback
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const paymentStatus = urlParams.get('payment')
-    const ref = urlParams.get('ref')
-
-    if (paymentStatus === 'success' && ref) {
-      const verifyPayment = async () => {
-        setLoading(true)
-        try {
-          // Verify the payment with Paystack
-          const response = await fetch('/api/payments/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reference: ref }),
-          })
-          const data = await response.json()
-
-          if (data.success) {
-            setSuccess(`Payment confirmed and booking ${ref} has been marked as paid.`)
-            setPaymentStatus('paid')
-          } else {
-            throw new Error('Payment verification failed')
-          }
-        } catch (err: unknown) {
-          console.error('Payment verification error:', err)
-          setError('Payment verification failed. Please contact support.')
-        } finally {
-          setLoading(false)
-          // Clean URL params
-          window.history.replaceState({}, document.title, window.location.pathname)
-        }
-      }
-      verifyPayment()
+  const verifyReference = useCallback(async (reference: string) => {
+    setVerifying(true)
+    setError('')
+    try {
+      const response = await fetch('/api/payments/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference }),
+      })
+      const data = await response.json()
+      if (response.status === 409) { setError('Payment is still pending — ask the guest to complete checkout, then try again.'); return }
+      if (!response.ok) throw new Error(data.error || 'Unable to verify payment.')
+      setSuccess(`Payment confirmed and booking ${reference} has been marked as paid.`)
+      setCheckoutQr(null)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unable to verify payment.')
+    } finally {
+      setVerifying(false)
     }
+  }, [])
+
+  // If the guest's own phone gets redirected back here after paying (it won't
+  // land on the front desk's screen, but handle it just in case someone opens
+  // the callback link directly).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const reference = params.get('verify')
+    if (reference) {
+      window.history.replaceState({}, '', window.location.pathname)
+      void verifyReference(reference)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot check for the return-from-checkout redirect
   }, [])
 
   const addItem = (itemType: ItemType, item: Room | Tent | Experience) => {
@@ -172,7 +171,9 @@ export default function StaffBookPage() {
     return sum + itemTotal
   }, 0)
 
-  // Initialize Paystack payment
+  // Creates the booking, then opens a MafrexPay checkout as a scan-to-pay QR
+  // code so the front desk can turn the screen to the guest instead of the
+  // guest needing to hand over a card or the desk navigating away.
   const handlePayment = async () => {
     if (!guestEmail) {
       setError('Guest email is required for payment');
@@ -184,32 +185,24 @@ export default function StaffBookPage() {
     }
     setPaymentStatus('processing');
     setError('');
+    setCheckoutQr(null)
     try {
       const booking = await createBooking('unpaid', false)
       const bookingReference = booking.reference
+      const callbackUrl = `${window.location.origin}/staff/book?verify=${encodeURIComponent(bookingReference)}`
 
-      // Initialize Paystack payment
       const response = await fetch('/api/payments/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: guestEmail,
-          amount: booking.total_amount,
-          bookingReference: bookingReference,
-          callbackUrl: `${window.location.origin}/staff/book?payment=success&ref=${bookingReference}`,
-          metadata: { 
-            booking_id: booking.booking_id,
-            guest_name: guestName, 
-            check_in: checkInDate, 
-            check_out: checkOutDate 
-          },
-        }),
+        body: JSON.stringify({ email: guestEmail, bookingReference, callbackUrl }),
       });
       const data = await response.json();
-      if (data.success && data.data?.authorization_url) {
-        // Store booking info for redirect handling
-        sessionStorage.setItem('pendingBookingRef', bookingReference);
-        window.location.assign(data.data.authorization_url);
+      const authorizationUrl = data.data?.authorization_url || data.authorization_url
+      if (data.success && authorizationUrl) {
+        setCheckoutQr({ reference: bookingReference, url: authorizationUrl })
+        setPaymentStatus('unpaid')
+        setGuestName(''); setGuestEmail(''); setGuestPhone(''); setSpecialRequests('')
+        setSelectedItems([])
       } else {
         throw new Error(data.error || 'Failed to initialize payment');
       }
@@ -286,6 +279,31 @@ export default function StaffBookPage() {
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
           <p className="text-sm text-green-700">{success}</p>
+        </div>
+      )}
+
+      {checkoutQr && (
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 text-lg font-semibold text-gray-900">Scan to pay</h2>
+          <p className="mb-4 text-sm text-gray-500">Turn the screen to the guest to scan with their phone and pay via MafrexPay. Reference: <span className="font-mono">{checkoutQr.reference}</span></p>
+          <div className="flex flex-col items-center gap-4 sm:flex-row">
+            <div className="rounded-lg border-2 border-dashed border-gray-200 bg-white p-4">
+              <QRCode value={checkoutQr.url} size={160} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <a href={checkoutQr.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0A3D62] underline underline-offset-2 hover:text-[#08324f]">
+                <ExternalLink className="h-3.5 w-3.5" /> Open checkout link
+              </a>
+              <button
+                type="button"
+                onClick={() => verifyReference(checkoutQr.reference)}
+                disabled={verifying}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0A3D62] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#08324f] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {verifying ? 'Checking…' : "I've collected payment — check status"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -546,7 +564,7 @@ export default function StaffBookPage() {
             disabled={loading || paymentStatus === 'processing' || selectedItems.length === 0}
             className="px-6 py-2.5 bg-[#0A3D62] text-white rounded-lg hover:bg-[#082032] transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {paymentStatus === 'processing' ? 'Processing...' : loading ? 'Creating...' : 'Continue to Payment'}
+            {paymentStatus === 'processing' ? 'Processing...' : loading ? 'Creating...' : 'Create & Get Payment QR'}
           </button>
           {true && (
             <button

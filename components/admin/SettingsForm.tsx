@@ -21,7 +21,7 @@ interface ResortSettings {
 
 const defaultSettings: ResortSettings = {
   resortName: 'Atican Beach Resort & Hotel',
-  contactEmail: 'info@aticanbeachresort.com',
+  contactEmail: 'aticanbeachresort716@gmail.com',
   phone: '+2349029622583',
   currency: 'NGN',
   paystackMode: 'test',

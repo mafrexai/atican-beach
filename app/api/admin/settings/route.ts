@@ -4,7 +4,7 @@ import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase/se
 
 const defaults = {
   resort_name: 'Atican Beach Resort & Hotel',
-  contact_email: 'info@aticanbeachresort.com',
+  contact_email: 'aticanbeachresort716@gmail.com',
   phone: '+2349029622583',
   currency: 'NGN' as const,
   paystack_mode: 'test' as const,

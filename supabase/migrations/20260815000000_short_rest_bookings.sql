@@ -118,7 +118,7 @@ BEGIN
 
   v_email := lower(trim(COALESCE(NULLIF(trim(p_guest_email), ''),
     (SELECT contact_email FROM public.resort_settings WHERE id = 1),
-    'info@aticanbeachresort.com')));
+    'aticanbeachresort716@gmail.com')));
   v_ends_at := v_now + make_interval(mins => p_duration_minutes);
 
   INSERT INTO public.bookings (

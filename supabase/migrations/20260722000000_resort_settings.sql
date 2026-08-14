@@ -23,7 +23,7 @@ INSERT INTO public.resort_settings (
   email_new_booking, email_cancellation, daily_booking_summary, payment_confirmation
 )
 VALUES (
-  1, 'Atican Beach Resort & Hotel', 'info@aticanbeachresort.com', '+2349029622583', 'NGN', 'test',
+  1, 'Atican Beach Resort & Hotel', 'aticanbeachresort716@gmail.com', '+2349029622583', 'NGN', 'test',
   '14:00', '12:00', 24, true, true, false, true
 )
 ON CONFLICT (id) DO NOTHING;

@@ -10,6 +10,7 @@ export default function TestPaymentCard() {
   const [status, setStatus] = useState<Status>('idle')
   const [reference, setReference] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -25,6 +26,12 @@ export default function TestPaymentCard() {
   async function runTestPayment() {
     setStatus('creating')
     setMessage('')
+    setCheckoutUrl(null)
+
+    // Open the tab synchronously, inside the click handler, so the browser treats it as a
+    // direct user action instead of a blocked popup. We point it at the real URL once we have it.
+    const newTab = window.open('', '_blank', 'noopener')
+
     try {
       const created = await fetch('/api/admin/test-payment', { method: 'POST' })
       const createdData = await created.json()
@@ -39,11 +46,19 @@ export default function TestPaymentCard() {
       const initializedData = await initialized.json()
       if (!initialized.ok) throw new Error(initializedData.error || 'Unable to start the test payment.')
 
+      const authorizationUrl = initializedData.data?.authorization_url || initializedData.authorization_url
       setReference(createdData.bookingReference)
+      setCheckoutUrl(authorizationUrl)
       setStatus('awaiting')
-      setMessage(`Checkout opened in a new tab for ${'₦'}${createdData.amount}. Complete it, then come back and check status.`)
-      window.open(initializedData.data?.authorization_url || initializedData.authorization_url, '_blank', 'noopener')
+
+      if (newTab) {
+        newTab.location.href = authorizationUrl
+        setMessage(`Checkout opened in a new tab for ${'₦'}${createdData.amount}. Complete it, then come back and check status.`)
+      } else {
+        setMessage(`Your browser blocked the popup. Use the "Open checkout" link below to pay ${'₦'}${createdData.amount}, then come back and check status.`)
+      }
     } catch (error) {
+      newTab?.close()
       setStatus('error')
       setMessage(error instanceof Error ? error.message : 'Unable to run the test payment.')
     }
@@ -113,6 +128,18 @@ export default function TestPaymentCard() {
         <p className="mt-3 text-xs text-gray-400">
           Test booking reference: <span className="font-mono">{reference}</span>
         </p>
+      )}
+
+      {checkoutUrl && status === 'awaiting' && (
+        <a
+          href={checkoutUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-[#0A3D62] underline underline-offset-2 hover:text-[#08324f]"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Open checkout
+        </a>
       )}
 
       {message && status === 'paid' && (

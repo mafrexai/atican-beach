@@ -359,7 +359,7 @@ This project is proprietary software for Atican Beach Resort.
 
 ## Support
 
-For support, email info@aticanbeachresort.com or open an issue in the repository.
+For support, email aticanbeachresort716@gmail.com or open an issue in the repository.
 
 ---
 

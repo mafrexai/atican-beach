@@ -34,3 +34,9 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           curl -sf -X GET "https://www.aticanbeachresort.com/api/cron/notify-staff-new-bookings" -H "Authorization: Bearer $CRON_SECRET"
+      - name: Expire timed-out short rests
+        if: github.event.schedule == '*/10 * * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -sf -X GET "https://www.aticanbeachresort.com/api/cron/expire-short-rests" -H "Authorization: Bearer $CRON_SECRET"

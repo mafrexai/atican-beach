@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { Filter } from 'lucide-react'
+import DeleteBookingButton from '@/components/admin/DeleteBookingButton'
 
 export default async function AdminBookingsPage({
   searchParams,
@@ -177,6 +178,7 @@ export default async function AdminBookingsPage({
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Guest Status</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -241,12 +243,15 @@ export default async function AdminBookingsPage({
                           {guestStatus}
                         </span>
                       </td>
+                      <td className="px-4 py-3">
+                        <DeleteBookingButton bookingId={booking.id} bookingReference={booking.booking_reference} />
+                      </td>
                     </tr>
                   )
                 })
               ) : (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
                     No bookings found
                   </td>
                 </tr>
